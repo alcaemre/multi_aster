@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/mnt/home/ealca/multi-aster/restart_experiment.py", line 25, in <module>
+    spindle.optimize(10000000)
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 969, in optimize
+    flush_accepted_states()
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 831, in flush_accepted_states
+    np.save(os.path.join(self.spindle_trace_path, trace_batch_name('push', start, end)), np.array(accepted_push_states))
+                         ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Spindle' object has no attribute 'spindle_trace_path'

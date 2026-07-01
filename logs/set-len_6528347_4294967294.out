@@ -1,0 +1,22 @@
+spindle saved to /mnt/home/ealca/ceph/multi_aster/dt-L/set_spindle_length_13_lbar_5000_tubulin_0.0005_temp/spindle.pkl
+                               Spindle Simulation                               
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                                    Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                                20079.70s │
+│ Last Accepted Time (s)            │                        39.34999999999899 │
+│ Last Accepted Position (um)       │    {1: array([-0.354, 0.383, 1.378]), 2: │
+│                                   │          array([0.736, -0.192, -0.595])} │
+│ distance between asters           │                        2.326341547838169 │
+│ Last Accepted Cost                │                       0.6744950235195367 │
+│ Number of MTs                     │                                      500 │
+│ Number of pushing MTs             │                                      450 │
+│ Number of pulling MTs             │                                       50 │
+│ Tubulin use / tubulin budget (um) │                 5000.927133452604 / 5000 │
+│ Attempt Counter                   │                                     1307 │
+│ Number of total attempts          │                        2000000 / 2000000 │
+│ Number of Positions Accepted      │                                    39350 │
+│ Memory (RSS)                      │                  0.50 GB / 65.5 GB alloc │
+└───────────────────────────────────┴──────────────────────────────────────────┘animation saved to /mnt/home/ealca/ceph/multi_aster/dt-L/set_spindle_length_13_lbar_5000_tubulin_0.0005_temp/plots/ani.mp4
+cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster/dt-L/set_spindle_length_13_lbar_5000_tubulin_0.0005_temp/plots/cost_time_plot_2_aster_5000_tubulin_0.0005_temp.png
+animation saved to /mnt/home/ealca/ceph/multi_aster/dt-L/set_spindle_length_13_lbar_5000_tubulin_0.0005_temp/plots/ani.mp4

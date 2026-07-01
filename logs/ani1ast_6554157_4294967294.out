@@ -1,0 +1,20 @@
+                               Spindle Simulation                               
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                                    Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                                24407.27s │
+│ Last Accepted Time (s)            │                       138.37600000029667 │
+│ Last Accepted Position (um)       │    {1: array([-0.078, 2.509, 5.866]), 2: │
+│                                   │          array([0.445, -2.026, -6.025])} │
+│ Spindle Length (um)               │                  12.737264684635317 / 13 │
+│ Net Force on aster 1 (pN)         │                  [-8.361 22.950 -27.497] │
+│ Last Accepted Cost                │                      0.40850553744490065 │
+│ Number of MTs                     │                                      901 │
+│ Number of pushing MTs             │                                      841 │
+│ Number of pulling MTs             │                                       60 │
+│ Tubulin use / tubulin budget (um) │               10000.898211646052 / 10000 │
+│ Attempt Counter                   │                                      397 │
+│ Number of total attempts          │                        2000000 / 2000000 │
+│ Number of Positions Accepted      │                                   138376 │
+│ Memory (RSS)                      │                  0.83 GB / 65.5 GB alloc │
+└───────────────────────────────────┴──────────────────────────────────────────┘

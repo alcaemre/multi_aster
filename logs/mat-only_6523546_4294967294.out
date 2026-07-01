@@ -1,0 +1,22 @@
+spindle saved to /mnt/home/ealca/ceph/multi_aster/dt-L/mat_cost_only_5.0_lbar_5000_tubulin_0.0005_temp/spindle.pkl
+                               Spindle Simulation                               
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                                    Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                                26740.83s │
+│ Last Accepted Time (s)            │                        56.30799999995947 │
+│ Last Accepted Position (um)       │     {1: array([2.193, 2.836, 1.095]), 2: │
+│                                   │         array([-2.089, -3.170, -0.728])} │
+│ distance between asters           │                        7.597384124765731 │
+│ Last Accepted Cost                │                    0.0006483527217824303 │
+│ Number of MTs                     │                                      519 │
+│ Number of pushing MTs             │                                      464 │
+│ Number of pulling MTs             │                                       55 │
+│ Tubulin use / tubulin budget (um) │                 5001.620881804456 / 5000 │
+│ Attempt Counter                   │                                        3 │
+│ Number of total attempts          │                        2000000 / 2000000 │
+│ Number of Positions Accepted      │                                    56308 │
+│ Memory (RSS)                      │                  0.48 GB / 65.5 GB alloc │
+└───────────────────────────────────┴──────────────────────────────────────────┘animation saved to /mnt/home/ealca/ceph/multi_aster/dt-L/mat_cost_only_5.0_lbar_5000_tubulin_0.0005_temp/plots/ani.mp4
+cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster/dt-L/mat_cost_only_5.0_lbar_5000_tubulin_0.0005_temp/plots/cost_time_plot_2_aster_5000_tubulin_0.0005_temp.png
+animation saved to /mnt/home/ealca/ceph/multi_aster/dt-L/mat_cost_only_5.0_lbar_5000_tubulin_0.0005_temp/plots/ani.mp4

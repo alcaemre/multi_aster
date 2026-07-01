@@ -1,0 +1,25 @@
+MovieWriter ffmpeg unavailable; using Pillow instead.
+Traceback (most recent call last):
+  File "/mnt/sw/nix/store/7kfpfhj104s5hynnhr5jzsrm25p4vwla-python-3.11.11-view/lib/python3.11/site-packages/PIL/Image.py", line 2571, in save
+    format = EXTENSION[ext]
+             ~~~~~~~~~^^^^^
+KeyError: '.mp4'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/mnt/home/ealca/multi-aster/analyze-two-aster-dynamics.py", line 29, in <module>
+    spindle.animate_mtoc_trajectory(save_path=ani_path)
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 973, in animate_mtoc_trajectory
+    anim.save(save_path, writer='ffmpeg', fps=1000 // interval)
+  File "/mnt/sw/nix/store/7kfpfhj104s5hynnhr5jzsrm25p4vwla-python-3.11.11-view/lib/python3.11/site-packages/matplotlib/animation.py", line 1098, in save
+    with (writer.saving(self._fig, filename, dpi),
+  File "/mnt/sw/nix/store/7kfpfhj104s5hynnhr5jzsrm25p4vwla-python-3.11.11-view/lib/python3.11/contextlib.py", line 144, in __exit__
+    next(self.gen)
+  File "/mnt/sw/nix/store/7kfpfhj104s5hynnhr5jzsrm25p4vwla-python-3.11.11-view/lib/python3.11/site-packages/matplotlib/animation.py", line 226, in saving
+    self.finish()
+  File "/mnt/sw/nix/store/7kfpfhj104s5hynnhr5jzsrm25p4vwla-python-3.11.11-view/lib/python3.11/site-packages/matplotlib/animation.py", line 506, in finish
+    self._frames[0].save(
+  File "/mnt/sw/nix/store/7kfpfhj104s5hynnhr5jzsrm25p4vwla-python-3.11.11-view/lib/python3.11/site-packages/PIL/Image.py", line 2574, in save
+    raise ValueError(msg) from e
+ValueError: unknown file extension: .mp4

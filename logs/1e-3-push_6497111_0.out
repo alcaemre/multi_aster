@@ -1,0 +1,15 @@
+spindle saved to /mnt/home/ealca/ceph/multi_aster/dt-L/time_ev_0.01_temp_0.001/spindle.pkl
+                            Spindle Simulation                            
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                              Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ wall elapsed time (s)             │                           3776.27s │
+│ Last Accepted Time (s)            │                 13.909999999999748 │
+│ Last Accepted Position (um)       │ {1: array([7.432, 6.039, -2.803])} │
+│ Last Accepted Cost                │                 0.9965349919255155 │
+│ number of MTs                     │                                721 │
+│ tubulin use / tubulin budget (um) │          9992.095014511082 / 10000 │
+│ Attempt Counter                   │                             936078 │
+│ Number of total attempts          │                  1000000 / 1000000 │
+│ Number of Positions Accepted      │                               1391 │
+└───────────────────────────────────┴────────────────────────────────────┘

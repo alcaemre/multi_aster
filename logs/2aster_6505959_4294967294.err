@@ -1,0 +1,2 @@
+/var/spool/slurmd/job6505959/slurm_script: line 19: 3287386 Killed                  python analyze-two-aster-dynamics.py
+slurmstepd: error: Detected 1 oom_kill event in StepId=6505959.batch. Some of the step tasks have been OOM Killed.

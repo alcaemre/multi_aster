@@ -1,0 +1,20 @@
+spindle saved to /mnt/home/ealca/ceph/multi_aster/dt-L/single_aster_positioning_reduced_tub_cost_1000_tubulin_0.002_temp/spindle.pkl
+                            Spindle Simulation                            
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                              Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                          12655.94s │
+│ Last Accepted Time (s)            │                  52.83699999996756 │
+│ Last Accepted Position (um)       │ {1: array([4.989, -0.001, 0.003])} │
+│ Total Force (pN)                  │           [-37.948 27.248 -15.132] │
+│ Last Accepted Cost                │                 0.5899486861597472 │
+│ Number of MTs                     │                                 97 │
+│ Number of pushing MTs             │                                 81 │
+│ Number of pulling MTs             │                                 16 │
+│ Tubulin use / tubulin budget (um) │          1000.1011902243091 / 1000 │
+│ Attempt Counter                   │                              12896 │
+│ Number of total attempts          │                  2000000 / 2000000 │
+│ Number of Positions Accepted      │                              52837 │
+│ Memory (RSS)                      │            0.50 GB / 65.5 GB alloc │
+└───────────────────────────────────┴────────────────────────────────────┘cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster/dt-L/single_aster_positioning_reduced_tub_cost_1000_tubulin_0.002_temp/plots/cost_time_plot_2_aster_1000_tubulin_0.002_temp.png
+animation saved to /mnt/home/ealca/ceph/multi_aster/dt-L/single_aster_positioning_reduced_tub_cost_1000_tubulin_0.002_temp/plots/ani.mp4

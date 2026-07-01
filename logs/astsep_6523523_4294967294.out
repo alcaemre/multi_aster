@@ -1,0 +1,15 @@
+2791439
+                         Restarting Spindle Simulation                          
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                    ┃                                         Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ State                        │                               323999 / 324000 │
+│ Current Time                 │                             323.9999999992503 │
+│ current_cost                 │                            0.2605467929266898 │
+│ Current Position             │         {1: array([3.459, -2.888, 5.317]), 2: │
+│                              │                array([1.420, 4.198, -6.006])} │
+│ number of MTs                │                                           861 │
+│ tubulin use / tubulin budget │                       4998.67955283407 / 5000 │
+│ Memory (RSS)                 │                       1.88 GB / 65.5 GB alloc │
+└──────────────────────────────┴───────────────────────────────────────────────┘cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster/dt-L/elong_further_start_2.0_lbar_5000_tubulin_0.0005_temp/plots/cost_time_plot_2_aster_5000_tubulin_0.0005_temp.png
+animation saved to /mnt/home/ealca/ceph/multi_aster/dt-L/elong_further_start_2.0_lbar_5000_tubulin_0.0005_temp/plots/ani.mp4

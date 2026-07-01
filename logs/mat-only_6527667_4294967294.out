@@ -1,0 +1,22 @@
+spindle saved to /mnt/home/ealca/ceph/multi_aster/dt-L/spindle_centring_5.0_lbar_5000_tubulin_0.0005_temp/spindle.pkl
+                               Spindle Simulation                               
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                                    Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                                15733.10s │
+│ Last Accepted Time (s)            │                          65.352999999948 │
+│ Last Accepted Position (um)       │   {1: array([-2.614, -0.113, 2.044]), 2: │
+│                                   │          array([2.556, -0.870, -2.960])} │
+│ distance between asters           │                         7.23503621040142 │
+│ Last Accepted Cost                │                    0.0007165339218908606 │
+│ Number of MTs                     │                                      530 │
+│ Number of pushing MTs             │                                      470 │
+│ Number of pulling MTs             │                                       60 │
+│ Tubulin use / tubulin budget (um) │                 5001.791334804727 / 5000 │
+│ Attempt Counter                   │                                       33 │
+│ Number of total attempts          │                        2000000 / 2000000 │
+│ Number of Positions Accepted      │                                    65353 │
+│ Memory (RSS)                      │                  0.55 GB / 65.5 GB alloc │
+└───────────────────────────────────┴──────────────────────────────────────────┘animation saved to /mnt/home/ealca/ceph/multi_aster/dt-L/spindle_centring_5.0_lbar_5000_tubulin_0.0005_temp/plots/ani.mp4
+cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster/dt-L/spindle_centring_5.0_lbar_5000_tubulin_0.0005_temp/plots/cost_time_plot_2_aster_5000_tubulin_0.0005_temp.png
+animation saved to /mnt/home/ealca/ceph/multi_aster/dt-L/spindle_centring_5.0_lbar_5000_tubulin_0.0005_temp/plots/ani.mp4

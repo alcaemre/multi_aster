@@ -1,0 +1,2 @@
+/var/spool/slurmd/job6497113/slurm_script: line 21: 963617 Killed                  python single-aster-centring.py --optimization_temperature 1e-3 --evolution_time $EV_TIME
+slurmstepd: error: Detected 1 oom_kill event in StepId=6497113.batch. Some of the step tasks have been OOM Killed.

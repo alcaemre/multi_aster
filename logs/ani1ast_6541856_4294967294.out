@@ -1,0 +1,18 @@
+                            Spindle Simulation                            
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                              Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                              0.00s │
+│ Last Accepted Time (s)            │                  51.99999999996951 │
+│ Last Accepted Position (um)       │ {1: array([4.999, -0.002, 0.007])} │
+│ Total Force (pN)                  │              [3.856 -13.130 2.952] │
+│ Last Accepted Cost                │                              40962 │
+│ Number of MTs                     │                                103 │
+│ Number of pushing MTs             │                                 83 │
+│ Number of pulling MTs             │                                 20 │
+│ Tubulin use / tubulin budget (um) │            1017.38626710525 / 1000 │
+│ Attempt Counter                   │                                  0 │
+│ Number of total attempts          │                 1964804 / 10000000 │
+│ Number of Positions Accepted      │                              52000 │
+│ Memory (RSS)                      │            0.50 GB / 65.5 GB alloc │
+└───────────────────────────────────┴────────────────────────────────────┘

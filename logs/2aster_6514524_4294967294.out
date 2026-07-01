@@ -1,0 +1,33 @@
+spindle saved to /mnt/home/ealca/ceph/multi_aster/dt-L/2_aster_test_pushing_and_pulling_100_tubulin_0.005_temp/spindle.pkl
+                               Spindle Simulation                               
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                                    Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                                  437.24s │
+│ Last Accepted Time (s)            │                     0.012000000000000004 │
+│ Last Accepted Position (um)       │     {1: array([0.000, 0.001, 0.100]), 2: │
+│                                   │           array([0.000, 0.000, -0.100])} │
+│ distance between asters           │                      0.20044029736637178 │
+│ Last Accepted Cost                │                     0.003902291115860991 │
+│ Number of MTs                     │                                       10 │
+│ Number of pushing MTs             │                                        6 │
+│ Number of pulling MTs             │                                        4 │
+│ Tubulin use / tubulin budget (um) │                 100.19511443275321 / 100 │
+│ Attempt Counter                   │                                    99981 │
+│ Number of total attempts          │                          100000 / 100000 │
+│ Number of Positions Accepted      │                                       12 │
+│ Memory (RSS)                      │                  0.11 GB / 65.5 GB alloc │
+└───────────────────────────────────┴──────────────────────────────────────────┘100001
+                         Restarting Spindle Simulation                          
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                    ┃                                         Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ State                        │                                       12 / 13 │
+│ Current Time                 │                          0.013000000000000005 │
+│ current_cost                 │                         0.0039022608853982966 │
+│ Current Position             │          {1: array([0.000, 0.001, 0.100]), 2: │
+│                              │                array([0.000, 0.000, -0.100])} │
+│ number of MTs                │                                            10 │
+│ tubulin use / tubulin budget │                      100.19511291925342 / 100 │
+│ Memory (RSS)                 │                       0.11 GB / 65.5 GB alloc │
+└──────────────────────────────┴───────────────────────────────────────────────┘
