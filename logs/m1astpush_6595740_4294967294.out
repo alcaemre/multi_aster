@@ -1,0 +1,25 @@
+spindle saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_push_10000_tubulin_0.0005_temperature/spindle.pkl
+                             Spindle Simulation                             
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                                Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                            14581.47s │
+│ Last Accepted Time (s)            │                    723.9209999897935 │
+│ Last Accepted Position (um)       │ {1: array([-0.073, -0.065, -0.233])} │
+│ Net Force on aster 1 (pN)         │              [-9.266 -35.248 46.223] │
+│ Last Accepted Cost                │                7.918359373138006e-05 │
+│ Number of MTs                     │                                 1000 │
+│ Number of pushing MTs             │                                  939 │
+│ Number of pulling MTs             │                                   61 │
+│ Tubulin use / tubulin budget (um) │            9999.208164062686 / 10000 │
+│ Attempt Counter                   │                                    2 │
+│ Number of total attempts          │                    2000000 / 2000000 │
+│ Number of Positions Accepted      │                               723921 │
+│ Memory (RSS)                      │              1.51 GB / 65.5 GB alloc │
+└───────────────────────────────────┴──────────────────────────────────────┘cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_push_10000_tubulin_0.0005_temperature/plots/cost_time_plot_2_aster_10000_tubulin_0.0005_temp.png
+# MTs per MTOC plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_push_10000_tubulin_0.0005_temperature/plots/num_mts_per_mtoc.png
+723.9219999897934
+Precomputing occupancy for 1446 frames...
+Done.
+Rendering Animation . . . 
+animation saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_push_10000_tubulin_0.0005_temperature/plots/occupancy_ani.mp4

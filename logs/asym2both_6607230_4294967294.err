@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/mnt/home/ealca/multi-aster/asymmetric_motor_lattice.py", line 61, in <module>
+    spindle.plot_aster_distance_from_centre()
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 1012, in plot_aster_distance_from_centre
+    mtoc_ids = sorted(self.trajectory[times[0]]['mtoc_pos'].keys())
+                                      ~~~~~^^^
+IndexError: list index out of range

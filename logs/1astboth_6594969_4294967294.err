@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "/mnt/home/ealca/multi-aster/two-aster-centring.py", line 70, in <module>
+    spindle.optimize(num_attempts)
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 945, in optimize
+    flush_accepted_states()
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 814, in flush_accepted_states
+    safe_pickle_dump(self.trajectory, trajectory_path)
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 52, in safe_pickle_dump
+    os.replace(tmp_path, target_path)  # use os.replace(), not os.rename()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/mnt/home/ealca/ceph/multi_aster/dt-L/single_aster_push_no_cost/trajectory.pkl.tmp' -> '/mnt/home/ealca/ceph/multi_aster/dt-L/single_aster_push_no_cost/trajectory.pkl'

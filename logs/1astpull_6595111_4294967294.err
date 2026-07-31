@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/mnt/home/ealca/multi-aster/two-aster-centring.py", line 71, in <module>
+    spindle.plot_aster_separation()
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 979, in plot_aster_separation
+    aster_separations.append(normalize_vecs(mtoc_positions[1] - mtoc_positions[2])[1])
+                                ^^^^^^^^^^^^^^^^^
+KeyError: 2

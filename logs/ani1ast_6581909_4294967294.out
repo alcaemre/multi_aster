@@ -1,0 +1,21 @@
+restarting /mnt/home/ealca/ceph/multi_aster/dt-L/test_new_saving_13_dbar_10000_tubulin_0.0002_temp/
+                               Spindle Simulation                               
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                                    Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                                   50.78s │
+│ Last Accepted Time (s)            │                       105.99900000014208 │
+│ Last Accepted Position (um)       │    {1: array([1.564, -0.468, 5.647]), 2: │
+│                                   │          array([0.870, -2.510, -7.088])} │
+│ Spindle Length (um)               │                  12.916205547447763 / 13 │
+│ Net Force on aster 1 (pN)         │                  [26.891 -17.230 30.741] │
+│ Last Accepted Cost                │                     0.042388274263621115 │
+│ Number of MTs                     │                                      859 │
+│ Number of pushing MTs             │                                      791 │
+│ Number of pulling MTs             │                                       68 │
+│ Tubulin use / tubulin budget (um) │                10016.81752331632 / 10000 │
+│ Attempt Counter                   │                                        0 │
+│ Number of total attempts          │                        838959 / 50000000 │
+│ Number of Positions Accepted      │                                   105999 │
+│ Memory (RSS)                      │                  0.42 GB / 65.5 GB alloc │
+└───────────────────────────────────┴──────────────────────────────────────────┘

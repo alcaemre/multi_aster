@@ -1,0 +1,20 @@
+spindle saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_both_no_cost/spindle.pkl
+                               Spindle Simulation                               
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                                    Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                                 4820.09s │
+│ Last Accepted Time (s)            │                        345.9989999987301 │
+│ Last Accepted Position (um)       │   {1: array([-2.342, -0.541, 1.935]), 2: │
+│                                   │           array([1.245, 1.101, -2.490])} │
+│ Net Force on aster 1 (pN)         │                    [17.582 2.659 -8.710] │
+│ Last Accepted Cost                │                                        0 │
+│ Number of MTs                     │                                      493 │
+│ Number of pushing MTs             │                                      436 │
+│ Number of pulling MTs             │                                       57 │
+│ Tubulin use / tubulin budget (um) │                4394.315613231256 / 10000 │
+│ Attempt Counter                   │                                        0 │
+│ Number of total attempts          │                         345999 / 1000000 │
+│ Number of Positions Accepted      │                                   345999 │
+│ Memory (RSS)                      │                  1.02 GB / 65.5 GB alloc │
+└───────────────────────────────────┴──────────────────────────────────────────┘

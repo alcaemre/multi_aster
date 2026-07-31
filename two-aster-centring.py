@@ -2,7 +2,7 @@
 # Emre Alca
 # University of Pennsylvania
 # Created on Tue Jun 09 2026
-# Last Modified: 2026/06/30 15:18:46
+# Last Modified: 2026/07/31 12:01:55
 #
 
 
@@ -28,7 +28,7 @@ import os
 # if timestep_size > 0.001:
 #     timestep_size = 0.001
 
-num_attempts = 20000000
+num_attempts = 2000000
 
 ceph = '/mnt/home/ealca/ceph/'
 home = '/mnt/home/ealca/'
@@ -37,38 +37,88 @@ home = '/mnt/home/ealca/'
 mesh_density = 6
 num_motors = 100
 cell_radius = 10 # um
-num_mts = 1000
+num_mts = 400
 tubulin_budget = num_mts*cell_radius
-optimization_temperature = 1e-4
+optimization_temperature = 5e-3
 average_mt_length = 2.0
-spindle_length = 13
+spindle_length = 9
 
 trimesh = np.load(f'{home}multi-aster/trimesh_cache/sphere_{mesh_density}_subdivs_1_radius.npy') * cell_radius
 sloan_100 = np.load(f'{home}multi-aster/sloane_cache/sloane_{num_motors}.npy') * cell_radius
 
 # try centring a single aster
-mtoc_positions = np.array([[0,0,1], [0,0,-1], [0, 1, 0], [0, -1, 0]])
-# mtoc_positions = np.array([[0,0,0]])
+mtoc_positions = np.array([[0,0,1], [0,0,-1]])
+# mtoc_positions = np.array([[0,0,5]])
+
+force='both'
 
 spindle = mas.Spindle(initial_mtoc_positions=mtoc_positions, 
             push_lattice=trimesh, 
             pull_lattice=sloan_100, 
             tubulin_budget=tubulin_budget,
-            stall_force=0.0,
-            rigidity=0.0,
+            stall_force=1.0,
+            # rigidity=0.0,
             pull_force=10.0,
             average_mt_length=average_mt_length,
             spindle_length=spindle_length,
             optimization_temperature=optimization_temperature,
-            data_dir=f'{ceph}multi_aster/dt-L',
-            # dir_prefix=f'set_spindle_length_{spindle_length}_with_centring_{tubulin_budget}_tubulin_{optimization_temperature}_temp',
-            dir_prefix=f'four_aster_{spindle_length}_dbar_{tubulin_budget}_tubulin_{optimization_temperature}_temp',
+            data_dir=f'{ceph}multi_aster/for-spindle-group-meeting/',
+            # dir_prefix=f'{len(mtoc_positions)}_aster_{force}_no_cost',
+            dir_prefix=f'{len(mtoc_positions)}_aster_{average_mt_length}_lbar_{force}_{tubulin_budget}_tubulin_{optimization_temperature}_temperature',
             save_trajectory=True,
             save=True
             )
 
-spindle.optimize(num_attempts)
-# spindle.plot_aster_separation()
+# num_pulling = 0
+# num_pushing = 0
+# prepop_trace = []
+# for i in range(int(.6 * 100)):
+#     push, lattice_site, site_value = spindle.sample_spindle_update(mtoc_id=1, add=True)
+
+#     if push:
+#         old_site_value = spindle.push_state[lattice_site]
+#         spindle.push_state[lattice_site] = site_value
+#         num_pushing += 1
+#     else:
+#         old_site_value = spindle.pull_state[lattice_site]
+#         spindle.pull_state[lattice_site] = site_value
+#         num_pulling += 1
+
+#     prepop_trace.append((push, lattice_site, site_value))
+
+# # record the pre-population as an initial spindle_trace batch so that
+# # calculate_num_mts_per_mtoc_over_time / calculate_motor_occupancy / calculate_push_occupancy
+# # (which reconstruct state by replaying spindle_trace from zero) see these MTs too
+# if spindle.save and prepop_trace:
+#     np.save(
+#         os.path.join(spindle.spindle_trace_path, f'spindle_trace_0_{len(prepop_trace)}.npy'),
+#         np.array(prepop_trace)
+#     )
+#     spindle.num_accepted_states = len(prepop_trace)
+
+# print(num_pulling)
+# print(num_pushing)
+
+# print(len(np.where(spindle.pull_state==1)[0]), len(np.where(spindle.push_state==1)[0]))
+
+# print(spindle.calc_mtoc_velocity(1), spindle.calc_mtoc_velocity(2))
+
+spindle.optimize(num_attempts, max_lab_time=500)
+
 spindle.plot_cost()
-# ani_path = os.path.join(spindle.plot_folder_path, f'ani.mp4')
-# spindle.animate_mtoc_trajectory(save_path=ani_path, stride=200)
+spindle.plot_aster_distance_from_centre()
+if len(mtoc_positions) == 2:
+    spindle.plot_aster_separation()
+spindle.plot_num_mts_per_mtoc()
+
+end_time = np.round(spindle.time)
+start_time = end_time - 100
+spindle.plot_occupancy_vs_angle(1, start_time, end_time, show_occupancy=force)
+if force == 'both':
+    spindle.plot_surface_occupancy(1, start_time, end_time, show_occupancy='pull')
+    spindle.plot_surface_occupancy(1, start_time, end_time, show_occupancy='push')
+else:
+    spindle.plot_surface_occupancy(1, start_time, end_time, show_occupancy=force)
+
+ani_path = os.path.join(spindle.plot_folder_path, f'occupancy_ani.mp4')
+spindle.animate_mtoc_trajectory(save_path=ani_path, interval=50, stride=1000, show_occupancy=force, occupancy_mtoc_id=1)

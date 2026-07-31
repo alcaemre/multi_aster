@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "/mnt/home/ealca/multi-aster/restart_experiment.py", line 38, in <module>
+    spindle.optimize(50000000)
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 931, in optimize
+    flush_accepted_states()
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 800, in flush_accepted_states
+    safe_pickle_dump(self.trajectory, trajectory_path)
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 51, in safe_pickle_dump
+    os.replace(tmp_path, target_path)  # use os.replace(), not os.rename()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/mnt/home/ealca/ceph/multi_aster/dt-L/test_new_saving_13_dbar_10000_tubulin_0.0002_temp/trajectory.pkl.tmp' -> '/mnt/home/ealca/ceph/multi_aster/dt-L/test_new_saving_13_dbar_10000_tubulin_0.0002_temp/trajectory.pkl'

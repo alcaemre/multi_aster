@@ -1,0 +1,89 @@
+
+
+For /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_pull_no_cost:
+
+cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_pull_no_cost/plots/cost_time_plot.png
+aster distance from centre saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_pull_no_cost/plots/aster_distance_from_centre.png
+# MTs per MTOC plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_pull_no_cost/plots/num_mts_per_mtoc.png
+occupancy vs angle plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_pull_no_cost/plots/occupancy_vs_angle.png
+surface occupancy saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_pull_no_cost/plots/surface_occupancy_pull.png
+975.9999999838326
+Precomputing occupancy for 975 frames...
+Done.
+Rendering Animation . . . 
+animation saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_pull_no_cost/plots/occupancy_ani.mp4
+
+
+For /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_push_no_cost:
+
+cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_push_no_cost/plots/cost_time_plot.png
+aster distance from centre saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_push_no_cost/plots/aster_distance_from_centre.png
+# MTs per MTOC plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_push_no_cost/plots/num_mts_per_mtoc.png
+occupancy vs angle plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_push_no_cost/plots/occupancy_vs_angle.png
+surface occupancy saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_push_no_cost/plots/surface_occupancy_push.png
+499.99999999508844
+Precomputing occupancy for 499 frames...
+Done.
+Rendering Animation . . . 
+animation saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_push_no_cost/plots/occupancy_ani.mp4
+
+
+For /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_both_no_cost:
+
+cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_both_no_cost/plots/cost_time_plot.png
+aster distance from centre saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_both_no_cost/plots/aster_distance_from_centre.png
+# MTs per MTOC plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_both_no_cost/plots/num_mts_per_mtoc.png
+occupancy vs angle plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_both_no_cost/plots/occupancy_vs_angle.png
+surface occupancy saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_both_no_cost/plots/surface_occupancy_pull.png
+surface occupancy saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_both_no_cost/plots/surface_occupancy_push.png
+499.99999999508844
+Precomputing occupancy for 499 frames...
+Done.
+Rendering Animation . . . 
+animation saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_both_no_cost/plots/occupancy_ani.mp4
+
+
+For /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_pull_no_cost:
+
+cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_pull_no_cost/plots/cost_time_plot.png
+aster distance from centre saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_pull_no_cost/plots/aster_distance_from_centre.png
+aster separation saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_pull_no_cost/plots/aster_dynamics.png
+# MTs per MTOC plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_pull_no_cost/plots/num_mts_per_mtoc.png
+occupancy vs angle plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_pull_no_cost/plots/occupancy_vs_angle.png
+surface occupancy saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_pull_no_cost/plots/surface_occupancy_pull.png
+738.9999999894369
+Precomputing occupancy for 738 frames...
+Done.
+Rendering Animation . . . 
+animation saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_pull_no_cost/plots/occupancy_ani.mp4
+
+
+For /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_push_no_cost:
+
+cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_push_no_cost/plots/cost_time_plot.png
+aster distance from centre saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_push_no_cost/plots/aster_distance_from_centre.png
+aster separation saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_push_no_cost/plots/aster_dynamics.png
+# MTs per MTOC plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_push_no_cost/plots/num_mts_per_mtoc.png
+occupancy vs angle plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_push_no_cost/plots/occupancy_vs_angle.png
+surface occupancy saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_push_no_cost/plots/surface_occupancy_push.png
+499.99999999508844
+Precomputing occupancy for 499 frames...
+Done.
+Rendering Animation . . . 
+animation saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_push_no_cost/plots/occupancy_ani.mp4
+
+
+For /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_both_no_cost:
+
+cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_both_no_cost/plots/cost_time_plot.png
+aster distance from centre saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_both_no_cost/plots/aster_distance_from_centre.png
+aster separation saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_both_no_cost/plots/aster_dynamics.png
+# MTs per MTOC plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_both_no_cost/plots/num_mts_per_mtoc.png
+occupancy vs angle plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_both_no_cost/plots/occupancy_vs_angle.png
+surface occupancy saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_both_no_cost/plots/surface_occupancy_pull.png
+surface occupancy saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_both_no_cost/plots/surface_occupancy_push.png
+345.99999999873006
+Precomputing occupancy for 345 frames...
+Done.
+Rendering Animation . . . 
+animation saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_both_no_cost/plots/occupancy_ani.mp4

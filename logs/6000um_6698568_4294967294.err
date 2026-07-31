@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/mnt/home/ealca/multi-aster/two-aster-centring.py", line 106, in <module>
+    spindle.optimize(num_attempts, max_lab_time=500)
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 894, in optimize
+    new_mtoc_positions, meta_boundary_violated, meta_trajectory  = self.time_evolution()
+                                                                   ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 553, in time_evolution
+    'cost': self.calculate_cost(),
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 634, in calculate_cost
+    cost += spatial_coefficient * np.square(1 - (current_spindle_length / self.spindle_length))
+                                                 ^^^^^^^^^^^^^^^^^^^^^^
+NameError: name 'current_spindle_length' is not defined

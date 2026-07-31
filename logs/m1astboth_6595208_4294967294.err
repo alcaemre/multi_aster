@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "/mnt/home/ealca/multi-aster/two-aster-centring.py", line 70, in <module>
+    spindle.optimize(num_attempts)
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 944, in optimize
+    flush_accepted_states()
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 798, in flush_accepted_states
+    np.save(os.path.join(self.spindle_trace_path, f'spindle_trace_{start}_{end}.npy' ), np.array(spindle_trace))
+  File "/mnt/sw/nix/store/7kfpfhj104s5hynnhr5jzsrm25p4vwla-python-3.11.11-view/lib/python3.11/site-packages/numpy/lib/_npyio_impl.py", line 577, in save
+    file_ctx = open(file, "wb")
+               ^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_both_10000_tubulin_0.0005_temperature/spindle_trace/spindle_trace_122000_123000.npy'

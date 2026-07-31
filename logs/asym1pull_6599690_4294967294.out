@@ -1,0 +1,19 @@
+spindle saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/asym_motors_2_aster_pull_10000_tubulin_0.0005_temperature/spindle.pkl
+                            Spindle Simulation                            
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                              Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                            611.94s │
+│ Last Accepted Time (s)            │                 27.999000000011236 │
+│ Last Accepted Position (um)       │ {1: array([4.447, 0.955, -0.521])} │
+│ Net Force on aster 1 (pN)         │            [-18.604 -9.003 -8.067] │
+│ Last Accepted Cost                │              0.0005979789263065305 │
+│ Number of MTs                     │                               1277 │
+│ Number of pushing MTs             │                               1219 │
+│ Number of pulling MTs             │                                 58 │
+│ Tubulin use / tubulin budget (um) │          9994.020210736935 / 10000 │
+│ Attempt Counter                   │                                  0 │
+│ Number of total attempts          │                    60123 / 2000000 │
+│ Number of Positions Accepted      │                              27999 │
+│ Memory (RSS)                      │            0.16 GB / 65.5 GB alloc │
+└───────────────────────────────────┴────────────────────────────────────┘

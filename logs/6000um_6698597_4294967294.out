@@ -1,0 +1,32 @@
+spindle saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_2.0_lbar_both_6000_tubulin_0.001_temperature/spindle.pkl
+                               Spindle Simulation                               
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                                    Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                                17973.93s │
+│ Last Accepted Time (s)            │             499.99999999508844 / 500.00s │
+│ Last Accepted Position (um)       │   {1: array([1.125, -1.483, -1.915]), 2: │
+│                                   │           array([-0.829, 1.515, 2.070])} │
+│ Spindle Length (um)               │                    5.356154601113441 / 9 │
+│ Net Force on aster 1 (pN)         │                 [-16.630 -4.349 -18.803] │
+│ Last Accepted Cost                │                   0.00023577219734460808 │
+│ Number of MTs                     │                                      636 │
+│ Number of pushing MTs             │                                      571 │
+│ Number of pulling MTs             │                                       65 │
+│ Tubulin use / tubulin budget (um) │                5998.5853668159325 / 6000 │
+│ Attempt Counter                   │                                        1 │
+│ Number of total attempts          │                        1089747 / 2000000 │
+│ Number of Positions Accepted      │                                   500000 │
+│ Memory (RSS)                      │                  1.44 GB / 65.5 GB alloc │
+└───────────────────────────────────┴──────────────────────────────────────────┘cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_2.0_lbar_both_6000_tubulin_0.001_temperature/plots/cost_time_plot.png
+aster distance from centre saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_2.0_lbar_both_6000_tubulin_0.001_temperature/plots/aster_distance_from_centre.png
+aster separation saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_2.0_lbar_both_6000_tubulin_0.001_temperature/plots/aster_separation.png
+# MTs per MTOC plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_2.0_lbar_both_6000_tubulin_0.001_temperature/plots/num_mts_per_mtoc.png
+occupancy vs angle plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_2.0_lbar_both_6000_tubulin_0.001_temperature/plots/occupancy_vs_angle.png
+surface occupancy saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_2.0_lbar_both_6000_tubulin_0.001_temperature/plots/surface_occupancy_pull.png
+surface occupancy saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_2.0_lbar_both_6000_tubulin_0.001_temperature/plots/surface_occupancy_push.png
+500.0009999950884
+Precomputing occupancy for 500 frames...
+Done.
+Rendering Animation . . . 
+animation saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_2.0_lbar_both_6000_tubulin_0.001_temperature/plots/occupancy_ani.mp4

@@ -1,0 +1,27 @@
+spindle saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_both_no_cost/spindle.pkl
+                               Spindle Simulation                               
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                                    Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                                 8095.63s │
+│ Last Accepted Time (s)            │                       499.99999999508844 │
+│ Last Accepted Position (um)       │   {1: array([-0.093, -0.808, 0.554]), 2: │
+│                                   │            array([0.509, 0.142, 0.068])} │
+│ Net Force on aster 1 (pN)         │                [-42.484 -28.230 -30.783] │
+│ Last Accepted Cost                │                                        0 │
+│ Number of MTs                     │                                     1287 │
+│ Number of pushing MTs             │                                     1215 │
+│ Number of pulling MTs             │                                       72 │
+│ Tubulin use / tubulin budget (um) │                12887.60654877244 / 10000 │
+│ Attempt Counter                   │                                        0 │
+│ Number of total attempts          │                          500000 / 500000 │
+│ Number of Positions Accepted      │                                   500000 │
+│ Memory (RSS)                      │                  1.37 GB / 65.5 GB alloc │
+└───────────────────────────────────┴──────────────────────────────────────────┘aster separation saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_both_no_cost/plots/aster_dynamics.png
+cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_both_no_cost/plots/cost_time_plot_2_aster_10000_tubulin_0.0005_temp.png
+# MTs per MTOC plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_both_no_cost/plots/num_mts_per_mtoc.png
+500.0009999950884
+Precomputing occupancy for 999 frames...
+Done.
+Rendering Animation . . . 
+animation saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_both_no_cost/plots/occupancy_ani.mp4

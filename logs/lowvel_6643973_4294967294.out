@@ -1,0 +1,21 @@
+restarting /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_both_unequal_initial_mts_0.005_temperature
+                               Spindle Simulation                               
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                                    Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                                 1438.56s │
+│ Last Accepted Time (s)            │             135.99900000028532 / 500.00s │
+│ Last Accepted Position (um)       │  {1: array([-0.318, -2.464, -0.163]), 2: │
+│                                   │            array([1.385, 2.180, 0.153])} │
+│ Spindle Length (um)               │                   4.956457381782157 / 13 │
+│ Net Force on aster 1 (pN)         │                 [-10.049 -28.828 17.167] │
+│ Last Accepted Cost                │                     0.008888653335350494 │
+│ Number of MTs                     │                                      431 │
+│ Number of pushing MTs             │                                      381 │
+│ Number of pulling MTs             │                                       50 │
+│ Tubulin use / tubulin budget (um) │                4035.5546133414023 / 4000 │
+│ Attempt Counter                   │                                        0 │
+│ Number of total attempts          │                         170082 / 5000000 │
+│ Number of Positions Accepted      │                                   136239 │
+│ Memory (RSS)                      │                  0.49 GB / 32.8 GB alloc │
+└───────────────────────────────────┴──────────────────────────────────────────┘
