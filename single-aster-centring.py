@@ -47,8 +47,9 @@ sloan_100 = np.load(f'{home}multi-aster/sloane_cache/sloane_{num_motors}.npy') *
 mtoc_positions = np.array([[0,0,0], [0,0,0]])
 
 spindle = mas.Spindle(initial_mtoc_positions=mtoc_positions, 
-            push_lattice=trimesh, 
-            pull_lattice=sloan_100, 
+            push_lattice=trimesh,
+            pull_lattice=sloan_100,
+            boundary_radius=cell_radius,
             tubulin_budget=tubulin_budget,
             stall_force=0.0,
             # evolution_time=0.5,

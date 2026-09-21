@@ -42,8 +42,9 @@ mtoc_positions = np.array([[0,0,1], [0,0,-1]])
 force='both'
 
 spindle = mas.Spindle(initial_mtoc_positions=mtoc_positions, 
-            push_lattice=trimesh, 
-            pull_lattice=asymmetric_motor_lattice, 
+            push_lattice=trimesh,
+            pull_lattice=asymmetric_motor_lattice,
+            boundary_radius=cell_radius,
             tubulin_budget=tubulin_budget,
             stall_force=0.0,
             # rigidity=0.0,

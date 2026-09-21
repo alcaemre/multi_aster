@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "/mnt/home/ealca/multi-aster-disk/animate_occupancy.py", line 36, in <module>
+    spindle = mas.retrieve_experiement(experiment_dir=exp_dir, save_trajectory=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/home/ealca/multi-aster-disk/multi_aster_spindle.py", line 170, in retrieve_experiement
+    num_attempts = np.load(num_attempts_path)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/sw/nix/store/a8ppasiv1n969bz16j9109jm05a13ncy-python-3.11.11-view/lib/python3.11/site-packages/numpy/lib/_npyio_impl.py", line 451, in load
+    fid = stack.enter_context(open(os.fspath(file), "rb"))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/mnt/home/ealca/ceph/multi_aster_disk/inital_experiments//Users/emrealca/ceph/multi_aster_disk/inital_experiments/fixed_mtocs_rigid_pushers_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.001_temperature_0.032_learning_rate/num_attempts.npy'

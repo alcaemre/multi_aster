@@ -1,0 +1,26 @@
+
+
+For /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate:
+
+cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/cost_time_plot.png
+aster distance from centre saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/aster_distance_from_centre.png
+aster separation saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/aster_separation.png
+# MTs per MTOC plot saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/num_mts_per_mtoc.png
+# disk MTs per MTOC plot saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/num_disk_mts_per_mtoc.png
+pull/push ratio plot saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/pull_to_push_ratio.png
+occupancy vs angle plot saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/occupancy_vs_angle.png
+surface occupancy saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/surface_occupancy_pull.png
+surface occupancy saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/surface_occupancy_push.png
+MT lifetime vs angle plot saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/lifetime_vs_angle.png
+MT lifetime surface plot saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/lifetime_surface_pull.png
+MT lifetime surface plot saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/lifetime_surface_push.png
+disk centre: [-0.000 -0.000 -0.000]  (target: origin)
+disk e1 (normal): [1.000 0.000 -0.000]  (target: +x)
+disk sites occupied: 214 / 40046
+mtoc trajectory frame saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/mtoc_trajectory_frame_t4.9920_both.png
+mtoc trajectory frame saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/mtoc_trajectory_frame_t480.0000_both.png
+479.999999999908
+Precomputing occupancy for 140 frames...
+Done.
+Rendering Animation . . . 
+animation saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/occupancy_ani.mp4

@@ -27,3 +27,6 @@ surface occupancy saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-me
 surface occupancy saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_2.0_lbar_both_4000_tubulin_0.005_temperature/plots/surface_occupancy_push.png
 500.0009999950884
 Precomputing occupancy for 500 frames...
+Done.
+Rendering Animation . . . 
+animation saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/2_aster_2.0_lbar_both_4000_tubulin_0.005_temperature/plots/occupancy_ani.mp4

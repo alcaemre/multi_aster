@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/mnt/home/ealca/multi-aster/two-aster-centring.py", line 106, in <module>
+    #         np.array(prepop_trace)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 958, in optimize
+    flush_accepted_states()
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 818, in flush_accepted_states
+    safe_pickle_dump(self.trajectory, trajectory_path)
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 52, in safe_pickle_dump
+    os.replace(tmp_path, target_path)  # use os.replace(), not os.rename()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_2.0_lbar_push_1000_tubulin_0.005_temperature/trajectory.pkl.tmp' -> '/mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_2.0_lbar_push_1000_tubulin_0.005_temperature/trajectory.pkl'

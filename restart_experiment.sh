@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=lowvel
+#SBATCH --job-name=pdisk
 #SBATCH --partition=ccb
 #SBATCH --output=logs/%x_%j_%a.out
 #SBATCH --error=logs/%x_%j_%a.err
-#SBATCH --time=5:00:00
+#SBATCH --time=10:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1          # single core per job

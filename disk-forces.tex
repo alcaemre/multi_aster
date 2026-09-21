@@ -1,0 +1,262 @@
+\documentclass[footheight=20pt, footsepline, headheight=20pt, headsepline]{scrartcl}
+%
+\usepackage[utf8]{inputenc} % below are various important packages
+\usepackage{csquotes}
+\usepackage{biblatex}
+\addbibresource{refs.bib}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{textcomp} 
+\usepackage{amsmath}
+\usepackage{mathrsfs}
+\usepackage{latexsym}
+\usepackage{amssymb}	
+\usepackage{amsfonts}
+\usepackage{theorem}
+\usepackage{graphicx}
+\usepackage{scrlayer-scrpage}
+\usepackage{xcolor}
+\usepackage{setspace}
+\usepackage{framed}
+\usepackage{hyperref} 
+\usepackage{pgf,tikz,pgfplots} % possibility to insert geogebra graphs
+\usepackage{mathrsfs}
+\pgfplotsset{compat=1.15}\usetikzlibrary{arrows} % part of geogebra package
+\usepackage{qrcode} % insert qr codes
+\usepackage{multicol}
+\usepackage{multirow}
+\usepackage{xurl}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+\usetikzlibrary{automata, positioning}
+
+% colours matching the original diagram
+\definecolor{fnormal}{HTML}{BA7517} % amber  - normal
+\definecolor{ftang}{HTML}{1D9E75}   % teal   - tangential
+\definecolor{fradial}{HTML}{7F77DD} % purple - radial
+\definecolor{axiscol}{HTML}{73726C} % grey   - normal axis / guides
+
+
+
+% Add to length for wider margins
+\addtolength{\textwidth}{3cm} % right to margin
+\addtolength{\hoffset}{-1.6cm} % left to margin
+\addtolength{\voffset}{-2cm} % to top
+\addtolength{\textheight}{6.5cm} % to bottom
+
+% Headers-Footers
+\definecolor{gro}{gray}{0.6} % define color
+\setkomafont{pagehead}{\normalfont\sffamily} % define header
+\setkomafont{pagefoot}{\normalfont\sffamily} % define footer
+\addtokomafont{headsepline}{\color{gro}} % define header horizontal line
+\addtokomafont{footsepline}{\color{gro}} % define footer horizontal line
+	\ihead{\color{gro} Stability with Turnover in Mitosis} % header (i=inner=left)
+	% \chead{\color{gro} PS4} % header (c=center)
+	\ohead{\color{gro} Emre Alca} % header (o=outer=right)
+	\ifoot{\color{gro} } % footer (i=inner=left)
+	\cfoot{\color{gro} - {\textbf\thepage} -} % footer (c=center)
+	\ofoot{\color{gro} } % footer (o=outer=right)
+
+
+%%\renewcommand{\sfdefault{}} % font
+\linespread{1.2} % increase line spacing
+
+%Setting folder to import images
+
+%Setting Paragraphs 
+\setlength\parindent{0pt}
+
+\newcommand{\declarecommand}[1]{\providecommand{#1}{}\renewcommand{#1}}
+\declarecommand{\ds}{\displaystyle}
+
+
+\begin{document}\thispagestyle{empty}
+
+%TITLE
+\noindent {\textbf{\Large{Forces and Torque on a Disk in the Stokes Regime}}}
+
+\normalsize 
+
+
+%STUDENT NUMBER
+\noindent {Emre R. Alca}\\
+\noindent {\today}
+
+\hrulefill
+
+% \tableofcontents
+% \newpage
+
+%---------------------------------------------------------------------------
+%SECTION OUTLINING
+% \noindent \hrulefill
+
+% \begin{figure}[H]
+%     % \hspace{-5pt}
+%     \centering
+%     \includegraphics[width=4.5in]{spindles.png}
+%     \caption{
+%         Cell undergoing mitosis. 
+%         The chromosomes have been duplicated but have not been segregated.
+%         The chromosomes make a spheroid object $P$ defined by it's position $\mathbf{R}_P$ and it's orientation $\mathbf{\Omega}_P$.
+%         Microtubules grow from centrosomes $C_1, C_2$ located at $\mathbf{R}_1$ and $\mathbf{R}_2$.
+%         Microtubules which are connected to either the cell wall exert pulling forces, as they are pulled on by dynein motors.
+%         Microtubules attached to $P$ exert pushing forces on the centrosome and on $P$.
+%         Despite all this forces and all the turnover, $P$ can be effectively static for extended periods of time.
+%     }
+%     \label{fig:B3e_b3}
+% \end{figure}
+
+\section{Forces and Torque}
+	\begin{figure}[H]
+		% \hspace{-5pt}
+		\centering
+		\begin{tikzpicture}[
+				>={Stealth[length=3mm]},
+				force/.style={line width=1pt,->},
+				axis/.style ={line width=0.8pt,->,axiscol},
+				guide/.style={line width=0.6pt,dashed,axiscol},
+				lbl/.style  ={font=\small},
+				sub/.style  ={font=\footnotesize}
+			]
+
+			% --- the disk (perspective ellipse) ---
+			\fill[black!5] (0,0) ellipse [x radius=4, y radius=1.2];
+			\draw[line width=0.5pt,black!55] (0,0) ellipse [x radius=4, y radius=1.2];
+			\node[sub,black!55] at (0,-0.6) {disk with radius $R$};
+
+			% --- symmetry axis (normal) ---
+			\draw[axis] (0,0) -- (0,3);
+			\node[lbl] at (-0.35,3) {$\hat n$};
+
+			% --- centre O ---
+			\fill (0,0) circle (2.2pt);
+			\node[sub] at (-0.3,-0.15) {$O$};
+
+			% --- application point P at radius r ---
+			\coordinate (P) at (2.6,0.3);
+			\draw[guide] (0,0) -- (P);
+			\node[sub] at (1.3,0.45) {$r$};
+			\fill (P) circle (2.2pt);
+			\node[sub] at (2.85,0.05) {$P$};
+
+			% --- force components from P ---
+			% normal (broadside): parallel to n-hat
+			\draw[force,fnormal] (P) -- ++(0,2.1);
+			\node[lbl,fnormal,anchor=west]  at (2.75,2.15) {$f_n$ (normal)};
+			\node[sub,fnormal,anchor=west]  at (2.75,1.8)  {$\to$ tumble about diameter};
+
+			% radial: along O->P extended (no torque)
+			\draw[force,fradial] (P) -- ++(1.59,0.18);
+			\node[lbl,fradial,anchor=west]  at (4.3,0.75)  {$f_r$ (radial)};
+			\node[sub,fradial,anchor=west]  at (4.3,0.4)   {$\to$ no torque};
+
+			% tangential: in-plane, perpendicular to r (spin)
+			\draw[force,ftang] (P) -- ++(0.16,-1.39);
+			\node[lbl,ftang,anchor=west]    at (2.95,-1.2) {$f_t$ (tangential)};
+			\node[sub,ftang,anchor=west]    at (2.95,-1.55){$\to$ spin about $\hat n$};
+
+			\end{tikzpicture}
+		\caption{
+			A force $\vec{f}$ is exerted against a disk centred at $\vec{O}$ with radius $R$ at point $P$, $|\vec{O} - \vec{P}| = r$.
+			That force can be decomposed into components normal to the disk, $f_n \hat{n}$, radial to the disk, $f_r \hat{s}$, and tangential to the disk $f_t \hat{t}$.
+		}
+		\label{fig:disk}
+	\end{figure}
+
+	Let $\vec{O}$ be the centre of a disk with radius $R$. This disk sits in cytoplasm with some viscosity $\mu$ large enough to be in the stokes regime.
+
+	A microtubule (MT) impinges on this disk at some point $\vec{P}$ such that $|\vec{O} - \vec{P}| = r$ and exerts a force $\vec{f}$ on the disk.
+
+	We can decompose $\vec{f}$ into the components, extending from $\vec{m}_i$, $f_r \hat{s}$ radial, $f_n \hat{n}$ normal, and $f_t \hat{t}$ tangential ($\hat{t} = \hat{n} \times \hat{s}$).
+	Then 
+	\begin{align}
+		\vec{f} = f_r \hat{r} + f_t \hat{t} + f_n \hat{n}
+	\end{align}
+	and the torque is simple to calculate because the radial component of force exerts no torque
+	\begin{align}
+		\vec{\tau} = (r \cdot \hat{s}) \times \vec{f} =  (r \cdot f_t) \hat{n} - (r \cdot f_n) \hat{t}
+	\end{align}
+
+	From the symmetry of a disk, we know there are four modes of motion, each with their own stokes resistance coefficient:
+	\begin{enumerate}
+		\item $\zeta_\parallel = \frac{32}{3} \mu R$ resists radial motion in plane with the disk,
+		\item $\zeta_\perp = 16 \mu R$ resists broadside motion out of plane with the disk,
+		\item $\zeta_\text{spin} = \frac{32}{3} \mu R^3$ resits spin about the centre of the disk,
+		\item $\zeta_\text{tumble} = \frac{32}{3} \mu R^3$ resists tumbling about the diameter of the disk,
+	\end{enumerate}
+	Set $\zeta_\omega = \zeta_\text{spin} = \zeta_\text{tumble} = \frac{32}{3} \mu R^3$.
+	It is unintuitive and surprising that the drag is the same for spinning and tumbling. 
+	These results are explicitly stated in \cite{kim2013microhydrodynamics}.
+
+	The equations of motion for a disk experiencing force from a single MT then are
+	\begin{align}
+		\vec{U} &= \frac{f_n}{\zeta_\perp} \hat{n} + \frac{1}{\zeta_\parallel} (f_r \hat{s} + f_t \hat{t}) \\
+		\vec{\omega} &= \frac{r}{\zeta_\omega} (f_t \hat{n} - f_n \hat{t})
+	\end{align}
+	with $\vec{P}$ following along as with a normal rigid body.
+
+	When there are many MTs, we have a collection of points exerting force $\{ \vec{P}_i \}$, each with their own $r_i, \hat{n}_i, \hat{t}_i ,  \hat{s}_i $.
+	Since the system is linear, the equations of motion for the collective system are
+	\begin{align}
+		\vec{U} &= \frac{1}{\zeta_\perp} \left( \sum_i f_{n, i} \cdot \hat{n}_i \right) + \frac{1}{\zeta_\parallel} \left( \sum_i f_{r, i} \cdot \hat{s}_i + f_{t,i} \cdot \hat{t}_i \right) \\
+		\vec{\omega} &= \frac{1}{\zeta_\omega} \left( \sum_i r_i ( f_{t,i} \cdot \hat{n}_i - f_{n,i} \cdot \hat{t}_i) \right)
+	\end{align}
+
+\newpage
+\section{impingement on disk test}
+
+	Let $\vec{R}_M$ be the position of an MTOC nucleating an MT with direction $\hat{m}$.
+	There is a metaphase plate with a centre of mass at $\vec{R}_D$, unit normal $\hat{n}$ and radius $a$.
+
+	\textbf{Claim:}
+
+	the MT hits the disk when 
+	\begin{align}
+		t^* = -\frac{\vec{R} \cdot \hat{n}}{\hat{m} \cdot \hat{n}} > 0 \text{ and } |\vec{R}_M + t^* \hat{m} - \vec{R}_D| \leq a.
+	\end{align}
+
+	\textbf{Proof:}
+	
+	The MT leaves from $\vec{R}_M$ and travels like a ray
+	\begin{align}
+		\vec{x}(t) = \vec{R}_m + t \hat{m}, \quad t \geq 0
+	\end{align}
+	
+	The position of the MTOC relative to the centre of the disk is $ \vec{R} = \vec{R}_M - \vec{R}_D$.
+	When the MT's ray hits the plane orthogonal to the disk's $\hat{n}$, the following must be true
+	\begin{align}
+		\left( \vec{R} + t \hat{m} \right) \cdot \hat{n} &= 0 \\
+		\implies \vec{R} \cdot \hat{n} + t (\hat{m} \cdot \hat{n}) = 0 \\
+		\implies t^* = -\frac{\vec{R} \cdot \hat{n}}{\hat{m} \cdot \hat{n}}
+	\end{align}
+	This is the length of the MT when it crosses the plane.
+	\begin{itemize}
+		\item If $t^* = 0$, the MT is moving parallel to the plane and never intersects it.
+		\item If $\hat{m} \cdot \hat{n} = 0 \implies t^* = \text{undefined}$, the MT is moving away from the plane and never intersects it.
+		\item If $t^* > 0$, the MT is moving towards the plane and intersects it when at length $t^*$.
+	\end{itemize}
+
+	The point on the plane where the MT hits is $P = \vec{R}_M + t^* \hat{m}$, and the MT hits the disk when $|P| \leq a$.
+
+	So the MT hits the disk when 
+	\begin{align}
+		t^* = -\frac{\vec{R} \cdot \hat{n}}{\hat{m} \cdot \hat{n}} > 0 \text{ and } |\vec{R}_M + t^* \hat{m} - \vec{R}_D| \leq a.
+	\end{align}
+
+
+
+
+
+
+%---------------------------------------------------------------------------
+
+%---------------------------------------------------------------------------
+
+
+\printbibliography
+
+\end{document}

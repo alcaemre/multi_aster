@@ -1,0 +1,20 @@
+restarting /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_2.0_lbar_push_500_tubulin_0.005_temperature
+                           Spindle Simulation                            
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                             Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                         12464.66s │
+│ Last Accepted Time (s)            │        241.901000000791 / 500.00s │
+│ Last Accepted Position (um)       │ {1: array([0.034, 0.035, 0.087])} │
+│ Net Force on aster 1 (pN)         │              [4.701 -3.141 2.135] │
+│ Last Accepted Cost                │             0.0006386917414438198 │
+│ Number of MTs                     │                                50 │
+│ Number of pushing MTs             │                                42 │
+│ Number of pulling MTs             │                                 8 │
+│ Tubulin use / tubulin budget (um) │           500.3193458707219 / 500 │
+│ Attempt Counter                   │                                32 │
+│ Number of total attempts          │                 5000000 / 5000000 │
+│ Number of Positions Accepted      │                            241901 │
+│ Memory (RSS)                      │           0.57 GB / 32.8 GB alloc │
+└───────────────────────────────────┴───────────────────────────────────┘cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_2.0_lbar_push_500_tubulin_0.005_temperature/plots/cost_time_plot.png
+aster distance from centre saved to /mnt/home/ealca/ceph/multi_aster/for-spindle-group-meeting/1_aster_2.0_lbar_push_500_tubulin_0.005_temperature/plots/aster_distance_from_centre.png

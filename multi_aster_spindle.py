@@ -2,7 +2,7 @@
 # Emre Alca
 # University of Pennsylvania
 # Created on Wed Jun 03 2026
-# Last Modified: 2026/07/29 16:04:09
+# Last Modified: 2026/09/18 16:18:31
 #
 
 import numpy as np
@@ -21,10 +21,13 @@ import glob
 import psutil
 from scipy.spatial import cKDTree
 
+from disk_tesselation import sunflower_disk_polar
+
 from rich.console import Console
 from rich.live import Live
 from rich.table import Table
 from matplotlib.animation import FuncAnimation
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 console = Console()
 
@@ -90,7 +93,76 @@ def normalize_vecs(vecs):
 
         norms[norms == 0] = 1  # Avoid division by zero
         return vecs / norms, saved_norms
-    
+
+
+def disk_local_tessellation(n, radius):
+    """
+    Body-frame (a, b) Cartesian coordinates for one face of a disk's tessellation,
+    from the (r, theta) sunflower tessellation in disk_tesselation.py.
+
+    Args:
+        n (int): number of lattice sites.
+        radius (float): disk radius.
+
+    Returns:
+        np.ndarray: shape (n, 2) array of (a, b) coordinates.
+    """
+    points = sunflower_disk_polar(n, radius)
+    if not points:
+        return np.zeros((0, 2))
+    r, theta = np.array(points).T
+    return np.column_stack([r * np.cos(theta), r * np.sin(theta)])
+
+
+def build_push_to_pull_map(push_points, pull_points, motor_radius):
+    """
+    Maps each push-lattice point to its nearest pull-lattice point, keeping only
+    pairs within motor_radius. Used to "promote" a sampled push site to a pull
+    attachment when a motor is close enough -- shared by the boundary lattice
+    and the disk's own push/pull tessellations.
+
+    Args:
+        push_points (np.ndarray): shape (N, d) push lattice/tessellation points.
+        pull_points (np.ndarray): shape (M, d) pull lattice/tessellation points.
+        motor_radius (float): maximum distance to keep a push -> pull pairing.
+
+    Returns:
+        dict[int, int]: push index -> nearest pull index, only for pairs within motor_radius.
+    """
+    tree = cKDTree(pull_points)
+    distances, nearest_pull_idx = tree.query(push_points, k=1)
+    return {
+        push_idx: pull_idx
+        for push_idx, (pull_idx, dist) in enumerate(zip(nearest_pull_idx, distances))
+        if dist <= motor_radius
+    }
+
+
+def rotate_frame(vectors, omega, dt):
+    """
+    Rotates a set of vectors by angle |omega|*dt about axis omega/|omega|, via
+    Rodrigues' rotation formula. Used to advance a rigid body's co-rotating
+    frame under Euler integration without accumulating orthonormality drift.
+
+    Args:
+        vectors (np.ndarray): shape (K, 3) vectors to rotate.
+        omega (np.ndarray): shape (3,) angular velocity vector.
+        dt (float): timestep.
+
+    Returns:
+        np.ndarray: shape (K, 3) rotated vectors.
+    """
+    angle = np.linalg.norm(omega) * dt
+    if angle == 0:
+        return vectors.copy()
+
+    axis = omega / np.linalg.norm(omega)
+    cos_a, sin_a = np.cos(angle), np.sin(angle)
+
+    return (vectors * cos_a
+            + np.cross(axis, vectors) * sin_a
+            + axis * np.dot(vectors, axis)[:, np.newaxis] * (1 - cos_a))
+
 
 def retrieve_experiement(experiment_dir, save_trajectory=False, save=False, max_states=None):
 
@@ -115,6 +187,13 @@ def retrieve_experiement(experiment_dir, save_trajectory=False, save=False, max_
     push_state = np.zeros(spindle_dict['push_lattice'].shape[0])
     pull_state = np.zeros(spindle_dict['pull_lattice'].shape[0])
 
+    num_disk_push_sites = spindle_dict.get('num_disk_push_sites', 50)
+    num_disk_pull_sites = spindle_dict.get('num_disk_pull_sites', 20)
+    disk_push_state_front = np.zeros(num_disk_push_sites)
+    disk_push_state_back = np.zeros(num_disk_push_sites)
+    disk_pull_state_front = np.zeros(num_disk_pull_sites)
+    disk_pull_state_back = np.zeros(num_disk_pull_sites)
+
     spindle_trace_dir = os.path.join(experiment_dir, 'spindle_trace')
     trace_files = sorted(
         glob.glob(os.path.join(spindle_trace_dir, 'spindle_trace_*.npy')),
@@ -128,6 +207,20 @@ def retrieve_experiement(experiment_dir, save_trajectory=False, save=False, max_
             else:
                 pull_state[int(lattice_site)] = site_value
 
+    # metaphase plate (disk) attachments: a separate, parallel trace log (see optimize())
+    disk_trace_files = sorted(
+        glob.glob(os.path.join(spindle_trace_dir, 'disk_trace_*.npy')),
+        key=lambda f: int(os.path.basename(f).split('_')[2])
+    )
+
+    for trace_file in disk_trace_files:
+        for push, front, lattice_site, site_value in np.load(trace_file, allow_pickle=True):
+            if push:
+                state = disk_push_state_front if front else disk_push_state_back
+            else:
+                state = disk_pull_state_front if front else disk_pull_state_back
+            state[int(lattice_site)] = site_value
+
     # reconstruct trajectory
 
     spindle_from_dict = Spindle(
@@ -135,7 +228,8 @@ def retrieve_experiement(experiment_dir, save_trajectory=False, save=False, max_
         push_lattice=spindle_dict['push_lattice'],
         pull_lattice=spindle_dict['pull_lattice'],
         initial_time=last_time, # s
-    
+        fix_mtoc_positions=spindle_dict.get('fix_mtoc_positions', False),
+
         # -- optimization paramters --
         tubulin_budget=spindle_dict['tubulin_budget'], # µm
         num_attempts=num_attempts, # only set if restarting an experiment
@@ -158,7 +252,24 @@ def retrieve_experiement(experiment_dir, save_trajectory=False, save=False, max_
         motor_radius=spindle_dict['motor_radius'], # µm
         average_mt_length=spindle_dict['average_mt_length'],
         spindle_length = spindle_dict['spindle_length'],
-    
+
+        # -- metaphase plate (disk) config -- (spindle_dict.get(...) falls back to the
+        # constructor defaults for experiments saved before the disk feature existed)
+        # default True: experiments saved before this flag existed all had a live plate
+        disk_enabled=spindle_dict.get('disk_enabled', True),
+        disk_radius=spindle_dict.get('disk_radius', 2.0),
+        # the pose the run itself last held, so a restart resumes the disk where it was even
+        # when the trajectory carries no disk snapshot (see the fallback below)
+        disk_center=spindle_dict.get('disk_center'),
+        disk_normal=spindle_dict.get('disk_e1'),
+        disk_tangent=spindle_dict.get('disk_e2'),
+        num_disk_push_sites=num_disk_push_sites,
+        num_disk_pull_sites=num_disk_pull_sites,
+        disk_zeta_parallel=spindle_dict.get('disk_zeta_parallel', 21.33),
+        disk_zeta_perp=spindle_dict.get('disk_zeta_perp', 32.0),
+        disk_zeta_omega=spindle_dict.get('disk_zeta_omega', 85.33),
+        disk_shadowing_enabled=spindle_dict.get('disk_shadowing_enabled', False),
+
         # -- saving info --
         seed=spindle_dict['seed'],  # random seed
         dir_path=experiment_dir, # directory of existing experiment
@@ -167,9 +278,27 @@ def retrieve_experiement(experiment_dir, save_trajectory=False, save=False, max_
         save=save,
         trajectory=trajectory,
         )
-    
+
     spindle_from_dict.push_state = push_state
     spindle_from_dict.pull_state = pull_state
+
+    spindle_from_dict.disk_push_state_front = disk_push_state_front
+    spindle_from_dict.disk_push_state_back = disk_push_state_back
+    spindle_from_dict.disk_pull_state_front = disk_pull_state_front
+    spindle_from_dict.disk_pull_state_back = disk_pull_state_back
+
+    last_disk_data = trajectory[last_time]
+    if not spindle_from_dict.disk_enabled:
+        pass  # no plate in this experiment; nothing to restore and nothing to warn about
+    elif 'disk_center' in last_disk_data:
+        spindle_from_dict.disk_center = last_disk_data['disk_center']
+        spindle_from_dict.disk_e1 = last_disk_data['disk_e1']
+        spindle_from_dict.disk_e2 = last_disk_data['disk_e2']
+        spindle_from_dict.disk_e3 = last_disk_data['disk_e3']
+    else:
+        print("No disk pose was recorded in this trajectory (predates disk tracking) -- "
+              "restarting the disk at the pose saved in spindle.pkl "
+              f"(centre {spindle_from_dict.disk_center}, e1 {spindle_from_dict.disk_e1}).")
 
     return spindle_from_dict
     
@@ -178,10 +307,12 @@ class Spindle:
 
     def __init__(
             self, 
-            initial_mtoc_positions, # numpy array of shape (k,3) for k MTOCs 
+            initial_mtoc_positions, # numpy array of shape (k,3) for k MTOCs
             push_lattice,
             pull_lattice,
             initial_time=0.0,
+            fix_mtoc_positions=False, # if True, MTOCs never move during time_evolution -- the
+                                       # disk (and site occupancy) still evolves normally
 
             # -- optimization paramters --
             tubulin_budget=100.0, # µm
@@ -199,14 +330,36 @@ class Spindle:
             
             rigidity=30.0, # pN µm^2 
             sliding_friction_coefficient=1.0, # pN s µm^{−1} coefficient of friction of MT sliding along cytoskeleton
-            growth_rate=1.0, # µm s^{−1}
-            pull_force=5.0, # pN 
-            stall_force=5.0, # pN
-            cytoplasmic_drag_factor=100.0, # pN s µm^{−1} drag factor of aster
+            growth_rate=0.5, # µm s^{−1}
+            pull_force=10.0, # pN 
+            stall_force=10.0, # pN
+            cytoplasmic_drag_factor=150.0, # pN s µm^{−1} drag factor of aster
             boundary_radius=10.0, # µm
-            motor_radius=1.0, # µm
+            motor_radius=1.5, # µm
             average_mt_length=10, # µm
             spindle_length=13, # µm
+
+            # -- metaphase plate (disk) --
+            # False removes the plate from the simulation entirely: no disk sites, no disk
+            # forces, no shadowing, and no disk terms in calculate_cost. Every disk-specific
+            # plot and the animation's disk overlay skip themselves too. Use this to run the
+            # boundary-only experiments this code did before the plate existed.
+            disk_enabled=True,
+            disk_radius=2.0, # µm
+            disk_center=None, # (3,) initial R_D, defaults to the origin
+            disk_normal=None, # (3,) initial e1, defaults to +z
+            disk_tangent=None, # (3,) initial in-plane reference vector used to build e2, defaults to +x
+            num_disk_push_sites=50,
+            num_disk_pull_sites=20,
+            # defaults below correspond to the disk-forces.tex formulas at µ=1.0 pN s µm^-2, radius=2.0 µm,
+            # but are independent constructor params (not derived from radius/viscosity at runtime)
+            disk_zeta_parallel=21.33, # pN s µm^-1, resists in-plane (radial/tangential) motion
+            disk_zeta_perp=32.0, # pN s µm^-1, resists broadside (normal) motion
+            disk_zeta_omega=85.33, # pN s µm, resists spin and tumble
+            # opt-in: sample_spindle_update only rejects disk-shadowed boundary sites when this
+            # is True, so existing experiments that don't care about the disk are unaffected by
+            # the fact that a (small, default) disk always exists on the Spindle
+            disk_shadowing_enabled=False,
 
             # -- saving info --
             trajectory={},
@@ -300,22 +453,87 @@ class Spindle:
             mtoc_positions[aster+1] = initial_mtoc_positions[aster]
         
         self.mtoc_positions = mtoc_positions
+        self.fix_mtoc_positions = fix_mtoc_positions
 
-        # set up map from pushing lattice to pulling lattice 
-        tree = cKDTree(pull_lattice)
+        # set up map from pushing lattice to pulling lattice
+        self.push_to_pull = build_push_to_pull_map(push_lattice, pull_lattice, motor_radius)
 
-        # For every high-res point, find its nearest low-res neighbor + distance
-        distances, nearest_pull_idx = tree.query(push_lattice, k=1)
+        # -- metaphase plate (disk) --
+        self.disk_enabled = disk_enabled
+        self.disk_radius = disk_radius
+        self.disk_zeta_parallel = disk_zeta_parallel
+        self.disk_zeta_perp = disk_zeta_perp
+        self.disk_zeta_omega = disk_zeta_omega
+        # shadowing is geometric -- boundary_sites_accessible tests rays against disk_radius,
+        # not against the site counts -- so a disabled plate would still occlude the boundary
+        # unless this is forced off here
+        self.disk_shadowing_enabled = disk_shadowing_enabled and disk_enabled
 
-        push_to_pull = { # high res lattice to low res lattice
-            push_idx: pull_idx
-            for push_idx, (pull_idx, dist) in enumerate(zip(nearest_pull_idx, distances)) # find the nearest pushing point for each pull point 
-            if dist <= motor_radius # ensure we only keep push points within motor radius to the nearest pull point
-        }
+        # with no sites, every disk state array is empty: the sampler has nothing to draw, the
+        # force sums are empty, and the tubulin/MT counts pick up nothing. The pose vectors are
+        # still built below so the rest of the class has valid (if unused) e1/e2/e3.
+        if not disk_enabled:
+            num_disk_push_sites = 0
+            num_disk_pull_sites = 0
 
-        self.push_to_pull = push_to_pull # many fewer than in the original pushing lattice 
+        if disk_center is None:
+            disk_center = np.zeros(3)
+        if disk_normal is None:
+            disk_normal = np.array([0.0, 0.0, 1.0])
+        if disk_tangent is None:
+            disk_tangent = np.array([1.0, 0.0, 0.0])
 
-        # -- setting up data saving -- 
+        self.disk_center = np.asarray(disk_center, dtype=float)
+        if self.disk_center.shape != (3,):
+            raise ValueError(f"disk_center must have shape (3,), got {self.disk_center.shape}")
+
+        # A disk that starts outside the cell trips time_evolution's boundary check on the very
+        # first Euler step, so every proposal is rejected and optimize() breaks out after one
+        # attempt with no diagnostic. Same test as in time_evolution -- fail here instead.
+        # Skipped when the plate is disabled: there is then no plate to collide with, and
+        # time_evolution does not run the check either.
+        if disk_enabled and np.linalg.norm(self.disk_center) + disk_radius > boundary_radius:
+            raise ValueError(
+                f"disk starts outside the cell: |disk_center| = {np.linalg.norm(self.disk_center):.3f} µm "
+                f"+ disk_radius = {disk_radius} µm exceeds boundary_radius = {boundary_radius} µm"
+            )
+
+        self.disk_e1 = normalize_vecs(np.asarray(disk_normal, dtype=float))[0]
+
+        # Gram-Schmidt disk_tangent against e1 to get an orthonormal in-plane reference vector
+        disk_tangent = np.asarray(disk_tangent, dtype=float)
+        disk_tangent = disk_tangent - np.dot(disk_tangent, self.disk_e1) * self.disk_e1
+        # a tangent parallel to the normal leaves nothing in-plane; normalize_vecs would hand back
+        # a zero e2 (and so a zero e3), collapsing the body frame without complaint
+        if np.linalg.norm(disk_tangent) == 0:
+            if disk_enabled:
+                raise ValueError("disk_tangent is parallel to disk_normal, so it defines no in-plane direction")
+            # no plate to orient, so don't make the caller supply a tangent they don't care
+            # about -- pick any perpendicular and keep the frame orthonormal
+            seed_axis = np.array([0.0, 1.0, 0.0]) if abs(self.disk_e1[0]) > 0.9 else np.array([1.0, 0.0, 0.0])
+            disk_tangent = seed_axis - np.dot(seed_axis, self.disk_e1) * self.disk_e1
+        self.disk_e2 = normalize_vecs(disk_tangent)[0]
+        self.disk_e3 = np.cross(self.disk_e1, self.disk_e2)
+
+        # body-frame (a, b) coordinates of each face's tessellation, shared by front and back;
+        # only the occupancy state differs per face
+        self.num_disk_push_sites = num_disk_push_sites
+        self.num_disk_pull_sites = num_disk_pull_sites
+        self.disk_push_local = disk_local_tessellation(num_disk_push_sites, disk_radius)
+        self.disk_pull_local = disk_local_tessellation(num_disk_pull_sites, disk_radius)
+
+        # push -> pull promotion map, same on both faces since they share the same local geometry
+        self.disk_push_to_pull_front = build_push_to_pull_map(self.disk_push_local, self.disk_pull_local, motor_radius)
+        self.disk_push_to_pull_back = self.disk_push_to_pull_front
+
+        # occupancy state: 0 = empty, mtoc_id = an MT from that mtoc is impinging on that site.
+        # front = +e1 outward normal, back = -e1 outward normal.
+        self.disk_push_state_front = np.zeros(num_disk_push_sites)
+        self.disk_push_state_back = np.zeros(num_disk_push_sites)
+        self.disk_pull_state_front = np.zeros(num_disk_pull_sites)
+        self.disk_pull_state_back = np.zeros(num_disk_pull_sites)
+
+        # -- setting up data saving --
 
         self.seed = seed
         self.rng = np.random.default_rng(self.seed)
@@ -413,6 +631,248 @@ class Spindle:
 
         state[mt_indices_to_remove] = 0
 
+    def add_microtubules_to_disk(self, mtoc_id, site_indices, push, front):
+        """
+        Manually attaches MTs to metaphase-plate (disk) lattice sites. Intended for
+        exercising the disk's equations of motion directly; not yet wired into
+        sample_spindle_update / optimize.
+
+        Args:
+            mtoc_id (int): id of MTOC MTs are nucleating from
+            site_indices (np.array(ints)): indices of disk lattice points MTs are impinging on
+            push (bool): True for the disk's pushing lattice, False for its pulling lattice
+            front (bool): True for the +e1 face, False for the -e1 face
+
+        Raises:
+            ValueError: cannot add a microtubule to a site already containing a microtubule
+            ValueError: the provided mtoc_id does not refer to an mtoc in this spindle
+        """
+
+        if push:
+            state = self.disk_push_state_front if front else self.disk_push_state_back
+        else:
+            state = self.disk_pull_state_front if front else self.disk_pull_state_back
+
+        if len(np.where(state[site_indices] != 0)[0]) != 0:
+            raise ValueError("cannot add a microtubule to a site already containing a microtubule")
+        if mtoc_id not in self.mtoc_positions.keys():
+            raise ValueError("the provided mtoc_id does not refer to an mtoc in this spindle")
+
+        state[site_indices] = mtoc_id
+
+    def remove_microtubules_from_disk(self, site_indices, push, front):
+        """
+        Manually removes MTs from metaphase-plate (disk) lattice sites.
+        See add_microtubules_to_disk.
+
+        Args:
+            site_indices (np.array(ints)): indices of disk lattice points to clear
+            push (bool): True for the disk's pushing lattice, False for its pulling lattice
+            front (bool): True for the +e1 face, False for the -e1 face
+
+        Raises:
+            ValueError: cannot remove a microtubule from an empty site
+        """
+
+        if push:
+            state = self.disk_push_state_front if front else self.disk_push_state_back
+        else:
+            state = self.disk_pull_state_front if front else self.disk_pull_state_back
+
+        if len(np.where(state[site_indices] == 0)[0]) != 0:
+            raise ValueError("cannot remove a microtubule from an empty site")
+
+        state[site_indices] = 0
+
+    def _resolve_state_array(self, is_disk, push, front):
+        """
+        Returns the actual state array a sample_spindle_update() descriptor refers to,
+        one of push_state/pull_state/disk_push_state_{front,back}/disk_pull_state_{front,back}.
+        Used by optimize() to mutate/revert the one site a proposed change targets.
+        """
+        if not is_disk:
+            return self.push_state if push else self.pull_state
+        if push:
+            return self.disk_push_state_front if front else self.disk_push_state_back
+        return self.disk_pull_state_front if front else self.disk_pull_state_back
+
+    def _disk_lab_frame(self, local_xy, face_sign):
+        """
+        Maps body-frame (a, b) disk-tessellation coordinates to their current
+        lab-frame geometry (disk-forces.tex section 1).
+
+        Args:
+            local_xy (np.ndarray): shape (K, 2) body-frame (a, b) coordinates.
+            face_sign (float): +1.0 for the front face (outward normal +e1), -1.0 for back (-e1).
+
+        Returns:
+            lab_positions (np.ndarray): shape (K, 3) current lab-frame positions.
+            r (np.ndarray): shape (K,) in-plane radial distance from the disk centre.
+            n_hat, s_hat, t_hat (np.ndarray): shape (K, 3) unit normal, radial, and
+                tangential directions at each site.
+        """
+        a = local_xy[:, 0]
+        b = local_xy[:, 1]
+
+        in_plane = a[:, np.newaxis] * self.disk_e2 + b[:, np.newaxis] * self.disk_e3
+        lab_positions = self.disk_center + in_plane
+
+        r = np.hypot(a, b)
+        s_hat = in_plane / r[:, np.newaxis]
+        n_hat = np.tile(face_sign * self.disk_e1, (len(a), 1))
+        t_hat = np.cross(n_hat, s_hat)
+
+        return lab_positions, r, n_hat, s_hat, t_hat
+
+    def disk_ray_intersection(self, ray_origin, directions):
+        """
+        Ray/disk intersection test (disk-forces.tex section 2): for MT(s) leaving
+        ray_origin along unit vector(s) `directions`, finds where -- if at all --
+        the straight-line path crosses the metaphase plate.
+
+        Args:
+            ray_origin (np.ndarray): shape (3,), the MT's starting point (R_M).
+            directions (np.ndarray): shape (K, 3) unit vectors (m_hat), or shape
+                (3,) for a single direction.
+
+        Returns:
+            hits (np.ndarray or bool): shape (K,) (or scalar for a single
+                direction) -- True where the ray crosses the disk's plane within
+                its radius, at a positive parameter t.
+            t_star (np.ndarray or float): shape (K,) (or scalar) -- the crossing
+                parameter (MT length) along each ray; only meaningful where
+                `hits` is True.
+        """
+        single = (directions.ndim == 1)
+        dirs = directions[np.newaxis, :] if single else directions
+
+        R = ray_origin - self.disk_center
+        m_dot_n = dirs @ self.disk_e1
+
+        with np.errstate(divide='ignore', invalid='ignore'):
+            t_star = -np.dot(R, self.disk_e1) / m_dot_n
+        # m_dot_n == 0 means the MT travels parallel to the disk's plane and never
+        # crosses it; use 0 rather than +/-inf so hit_points below stays finite
+        # (t_star > 0 already excludes this case from `hits`).
+        t_star = np.where(m_dot_n == 0, 0.0, t_star)
+
+        hit_points = ray_origin + t_star[:, np.newaxis] * dirs
+        within_radius = np.linalg.norm(hit_points - self.disk_center, axis=1) <= self.disk_radius
+        hits = (t_star > 0) & within_radius
+
+        if single:
+            return bool(hits[0]), float(t_star[0])
+        return hits, t_star
+
+    def is_disk_face_reachable(self, mtoc_id, front):
+        """
+        True if MTOC `mtoc_id` sits on the side of the disk's (infinitesimally
+        thin) plane matching `front` -- i.e. it can grow a straight MT directly
+        onto that face of the metaphase plate without passing through the disk.
+
+        Args:
+            mtoc_id (int): id of the MTOC.
+            front (bool): True to check the +e1 face, False for the -e1 face.
+
+        Raises:
+            ValueError: the provided mtoc_id does not refer to an mtoc in this spindle
+
+        Returns:
+            bool: True if the MTOC is on the correct side to reach that face.
+        """
+        if mtoc_id not in self.mtoc_positions.keys():
+            raise ValueError("the provided mtoc_id does not refer to an mtoc in this spindle")
+
+        side = np.dot(self.mtoc_positions[mtoc_id] - self.disk_center, self.disk_e1)
+        return side > 0 if front else side < 0
+
+    def boundary_sites_accessible(self, mtoc_id, site_positions):
+        """
+        For each candidate site (typically boundary lattice points), checks
+        whether a straight MT from MTOC `mtoc_id` can reach it without first
+        being blocked by the metaphase plate's shadow (disk-forces.tex section 2).
+
+        Args:
+            mtoc_id (int): id of the MTOC.
+            site_positions (np.ndarray): shape (K, 3) candidate site positions.
+
+        Raises:
+            ValueError: the provided mtoc_id does not refer to an mtoc in this spindle
+
+        Returns:
+            np.ndarray: shape (K,) boolean array, True where the site is accessible.
+        """
+        if mtoc_id not in self.mtoc_positions.keys():
+            raise ValueError("the provided mtoc_id does not refer to an mtoc in this spindle")
+
+        mtoc_position = self.mtoc_positions[mtoc_id]
+        dirs, distances = normalize_vecs(site_positions - mtoc_position)
+
+        hits, t_star = self.disk_ray_intersection(mtoc_position, dirs)
+        shadowed = hits & (t_star < distances)
+
+        return ~shadowed
+
+    def cull_shadowed_microtubules(self):
+        """
+        Detaches every attached MT whose straight line from its own MTOC is no longer
+        clear, and reports what was cleared.
+
+        Reachability is otherwise only ever checked at nucleation, when
+        sample_spindle_update picks a site that is lit at that moment. The metaphase
+        plate then keeps moving under its own EOM, so a site that was lit when its MT
+        grew there can sit behind the plate a few steps later -- and without this the MT
+        stays attached, still pushing or pulling through the plate. Two ways that
+        happens, one per lattice family:
+          - a boundary site the plate has since moved in front of;
+          - a disk site whose MTOC has ended up on the far side of the plate, so that
+            face can no longer be reached in a straight line at all.
+
+        Does nothing unless disk_shadowing_enabled, so experiments that don't model the
+        plate's occlusion keep their previous behaviour (see __init__).
+
+        Returns:
+            list: (is_disk, push, front, lattice_site, old_site_value) per MT detached
+            -- enough for optimize() to unwind the cull if the step is rejected, and to
+            log it to the spindle traces if it is accepted.
+        """
+        if not (self.disk_enabled and self.disk_shadowing_enabled):
+            return []
+
+        cleared = []
+
+        # -- boundary lattices: has the plate moved into the line of sight? --
+        for push, state, lattice in ((True, self.push_state, self.push_lattice),
+                                      (False, self.pull_state, self.pull_lattice)):
+            occupied = np.flatnonzero(state)
+            if occupied.size == 0:
+                continue
+            holders = state[occupied]
+            for mtoc_id in np.unique(holders):
+                held = occupied[holders == mtoc_id]
+                blocked = held[~self.boundary_sites_accessible(int(mtoc_id), lattice[held])]
+                for site in blocked:
+                    cleared.append((False, push, None, int(site), state[site]))
+                    state[site] = 0
+
+        # -- disk faces: an MTOC can only hold a face it is still on the near side of --
+        for push, front, state in ((True, True, self.disk_push_state_front),
+                                    (True, False, self.disk_push_state_back),
+                                    (False, True, self.disk_pull_state_front),
+                                    (False, False, self.disk_pull_state_back)):
+            occupied = np.flatnonzero(state)
+            if occupied.size == 0:
+                continue
+            holders = state[occupied]
+            for mtoc_id in np.unique(holders):
+                if self.is_disk_face_reachable(int(mtoc_id), front=front):
+                    continue
+                for site in occupied[holders == mtoc_id]:
+                    cleared.append((True, push, front, int(site), state[site]))
+                    state[site] = 0
+
+        return cleared
+
     def calculate_pulling_forces(self, mtoc_id):
         """
         Calculates the pulling force experienced by the MTOC.
@@ -464,21 +924,8 @@ class Spindle:
         relevant_mt_vecs = connected_points - self.mtoc_positions[mtoc_id]
         dirs, norms = normalize_vecs(relevant_mt_vecs)
 
-        # -- calculating buckling forces --
-        # calculating the effective force coefficients (mt_dir . boundary_norm)
-        buckling_forces = (np.pi**2) * self.rigidity / (norms**2)
-
-        # -- calculating unbuckled pushing forces --
-        # calculating the effective force coefficients (mt_dir . boundary_norm)
         pushing_boundary_normals = self.push_boundary_unit_normals[self.push_state == mtoc_id]
-        effective_force_coefficients = np.sum(dirs * pushing_boundary_normals, axis=1)
-        # calculating the denominator of the pushing force magnitude
-        pushing_force_denominators = (self.stall_force / (self.growth_rate * self.sliding_friction_coefficient)) * (1 - effective_force_coefficients) + 1
-        # putting the pieces together
-        pushing_force_magnitudes = self.stall_force / pushing_force_denominators
-
-        # -- pushing forces are bounded above by the buckling force --
-        pushing_force_magnitudes[pushing_force_magnitudes > buckling_forces] = buckling_forces[pushing_force_magnitudes > buckling_forces]
+        pushing_force_magnitudes = self._pushing_force_magnitudes(dirs, norms, pushing_boundary_normals)
 
         # total pushing force is the component-wise sum of the pushing vectors
         pushing_vectors = pushing_force_magnitudes[:, np.newaxis] * dirs
@@ -489,6 +936,98 @@ class Spindle:
 
         return total_pushing_force
 
+    def _pushing_force_magnitudes(self, dirs, norms, wall_normals):
+        """
+        Shared force-magnitude model for an MT pushing against a wall (boundary or
+        disk): a stall-force ratchet, capped by the Euler buckling force.
+
+        Args:
+            dirs (np.ndarray): shape (K, 3) unit vectors from MTOC to each pushing site.
+            norms (np.ndarray): shape (K,) MT lengths.
+            wall_normals (np.ndarray): shape (K, 3) outward unit normal of the wall at each site.
+
+        Returns:
+            np.ndarray: shape (K,) pushing force magnitudes.
+        """
+        # -- calculating buckling forces --
+        buckling_forces = (np.pi**2) * self.rigidity / (norms**2)
+
+        # -- calculating unbuckled pushing forces --
+        # calculating the effective force coefficients (mt_dir . wall_norm)
+        effective_force_coefficients = np.sum(dirs * wall_normals, axis=1)
+        # calculating the denominator of the pushing force magnitude
+        pushing_force_denominators = (self.stall_force / (self.growth_rate * self.sliding_friction_coefficient)) * (1 - effective_force_coefficients) + 1
+        # putting the pieces together
+        pushing_force_magnitudes = self.stall_force / pushing_force_denominators
+
+        # -- pushing forces are bounded above by the buckling force --
+        pushing_force_magnitudes[pushing_force_magnitudes > buckling_forces] = buckling_forces[pushing_force_magnitudes > buckling_forces]
+
+        return pushing_force_magnitudes
+
+    def calculate_disk_pulling_forces(self, mtoc_id):
+        """
+        Reaction force on an MTOC from pulling MTs attached to the metaphase plate.
+
+        Args:
+            mtoc_id (int): id of MTOC we are calculating the force on
+
+        Raises:
+            ValueError: the provided mtoc_id does not refer to an mtoc in this spindle
+
+        Returns:
+            np.ndarray: shape (3,) pulling force in pN experienced by the MTOC
+        """
+        if mtoc_id not in self.mtoc_positions.keys():
+            raise ValueError("the provided mtoc_id does not refer to an mtoc in this spindle")
+
+        total_force = np.zeros(3)
+        if not self.disk_enabled:
+            return total_force
+
+        for state, face_sign in [(self.disk_pull_state_front, 1.0), (self.disk_pull_state_back, -1.0)]:
+            occupied = state == mtoc_id
+            if not occupied.any():
+                continue
+
+            lab_positions, _, _, _, _ = self._disk_lab_frame(self.disk_pull_local[occupied], face_sign)
+            dirs, _ = normalize_vecs(lab_positions - self.mtoc_positions[mtoc_id])
+            total_force += self.pull_force * np.sum(dirs, axis=0)
+
+        return total_force
+
+    def calculate_disk_pushing_forces(self, mtoc_id):
+        """
+        Reaction force on an MTOC from pushing MTs attached to the metaphase plate.
+
+        Args:
+            mtoc_id (int): id of MTOC we are calculating the force on
+
+        Raises:
+            ValueError: the provided mtoc_id does not refer to an mtoc in this spindle
+
+        Returns:
+            np.ndarray: shape (3,) pushing force in pN experienced by the MTOC
+        """
+        if mtoc_id not in self.mtoc_positions.keys():
+            raise ValueError("the provided mtoc_id does not refer to an mtoc in this spindle")
+
+        total_force = np.zeros(3)
+        if not self.disk_enabled:
+            return total_force
+
+        for state, face_sign in [(self.disk_push_state_front, 1.0), (self.disk_push_state_back, -1.0)]:
+            occupied = state == mtoc_id
+            if not occupied.any():
+                continue
+
+            lab_positions, _, _, _, _ = self._disk_lab_frame(self.disk_push_local[occupied], face_sign)
+            dirs, norms = normalize_vecs(lab_positions - self.mtoc_positions[mtoc_id])
+            wall_normals = np.tile(face_sign * self.disk_e1, (len(dirs), 1))
+            magnitudes = self._pushing_force_magnitudes(dirs, norms, wall_normals)
+            total_force += -np.sum(magnitudes[:, np.newaxis] * dirs, axis=0)
+
+        return total_force
 
     def calc_mtoc_velocity(self, mtoc_id):
         """Calculates the velocity of an mtoc based on the mtoc position and the set of pushing and pulling mts connected to it.
@@ -499,8 +1038,60 @@ class Spindle:
         """
         if mtoc_id not in self.mtoc_positions.keys():
             raise ValueError("the provided mtoc_id does not refer to an mtoc in this spindle")
-        
-        return (self.calculate_pulling_forces(mtoc_id) + self.calculate_pushing_forces(mtoc_id)) / self.cytoplasmic_drag_factor
+
+        return (self.calculate_pulling_forces(mtoc_id) + self.calculate_pushing_forces(mtoc_id)
+                + self.calculate_disk_pulling_forces(mtoc_id) + self.calculate_disk_pushing_forces(mtoc_id)
+                ) / self.cytoplasmic_drag_factor
+
+    def calculate_disk_velocity_and_omega(self):
+        """
+        Equations of motion for the metaphase plate (disk-forces.tex section 1),
+        aggregated over every MT currently attached to any disk site, from any MTOC.
+
+        Returns:
+            U (np.ndarray): shape (3,) translational velocity of the disk centre.
+            omega (np.ndarray): shape (3,) angular velocity of the disk frame.
+        """
+        U = np.zeros(3)
+        omega = np.zeros(3)
+
+        if not self.disk_enabled:
+            return U, omega
+
+        groups = [
+            (self.disk_push_state_front, self.disk_push_local, 1.0, True),
+            (self.disk_push_state_back, self.disk_push_local, -1.0, True),
+            (self.disk_pull_state_front, self.disk_pull_local, 1.0, False),
+            (self.disk_pull_state_back, self.disk_pull_local, -1.0, False),
+        ]
+
+        for state, local, face_sign, is_push in groups:
+            occupied = state != 0
+            if not occupied.any():
+                continue
+
+            lab_pos, r, n_hat, s_hat, t_hat = self._disk_lab_frame(local[occupied], face_sign)
+            mtoc_pos = np.array([self.mtoc_positions[mtoc_id] for mtoc_id in state[occupied]])
+            dirs, norms = normalize_vecs(lab_pos - mtoc_pos)
+
+            if is_push:
+                # reaction to the MTOC-side "-sum(magnitude * dirs)"
+                wall_normals = np.tile(face_sign * self.disk_e1, (len(dirs), 1))
+                magnitudes = self._pushing_force_magnitudes(dirs, norms, wall_normals)
+                force_on_disk = magnitudes[:, np.newaxis] * dirs
+            else:
+                # reaction to the MTOC-side "+pull_force * dirs"
+                force_on_disk = -self.pull_force * dirs
+
+            f_n = np.sum(force_on_disk * n_hat, axis=1)
+            f_r = np.sum(force_on_disk * s_hat, axis=1)
+            f_t = np.sum(force_on_disk * t_hat, axis=1)
+
+            U += np.sum(f_n[:, np.newaxis] * n_hat, axis=0) / self.disk_zeta_perp
+            U += np.sum(f_r[:, np.newaxis] * s_hat + f_t[:, np.newaxis] * t_hat, axis=0) / self.disk_zeta_parallel
+            omega += np.sum(r[:, np.newaxis] * (f_t[:, np.newaxis] * n_hat - f_n[:, np.newaxis] * t_hat), axis=0) / self.disk_zeta_omega
+
+        return U, omega
 
 
     def time_evolution(self, evolution_time=None):
@@ -529,17 +1120,32 @@ class Spindle:
         
         while (current_time - time_before_evolution) < evolution_time and not boundary_violated:
 
-            # evolve each MTOC by one timestep.
-            for mtoc_id in self.mtoc_positions.keys():
-                # calculate velocity
-                dr_dt = self.calc_mtoc_velocity(mtoc_id) 
-                
-                # calculate the new position of the MTOC
-                mtoc_positions[mtoc_id] = mtoc_positions[mtoc_id] + (dr_dt * self.euler_timestep_size)
+            # evolve each MTOC by one timestep, unless they've been fixed in place (the disk
+            # still evolves below regardless).
+            if not self.fix_mtoc_positions:
+                for mtoc_id in self.mtoc_positions.keys():
+                    # calculate velocity
+                    dr_dt = self.calc_mtoc_velocity(mtoc_id)
 
-                # check that the new mtoc position is not outside of the radius
-                normalized_new_mtoc_pos, new_mtoc_pos_norm = normalize_vecs(mtoc_positions[mtoc_id])
-                if new_mtoc_pos_norm > self.boundary_radius:
+                    # calculate the new position of the MTOC
+                    mtoc_positions[mtoc_id] = mtoc_positions[mtoc_id] + (dr_dt * self.euler_timestep_size)
+
+                    # check that the new mtoc position is not outside of the radius
+                    normalized_new_mtoc_pos, new_mtoc_pos_norm = normalize_vecs(mtoc_positions[mtoc_id])
+                    if new_mtoc_pos_norm > self.boundary_radius:
+                        boundary_violated = True
+
+            # evolve the metaphase plate by one timestep (mutated in place -- not yet
+            # reverted on optimize()'s Metropolis-Hastings rejection, see plan notes)
+            if self.disk_enabled:
+                U_disk, omega_disk = self.calculate_disk_velocity_and_omega()
+                self.disk_center = self.disk_center + U_disk * self.euler_timestep_size
+
+                frame = rotate_frame(np.stack([self.disk_e1, self.disk_e2, self.disk_e3]),
+                                      omega_disk, self.euler_timestep_size)
+                self.disk_e1, self.disk_e2, self.disk_e3 = frame
+
+                if np.linalg.norm(self.disk_center) + self.disk_radius > self.boundary_radius:
                     boundary_violated = True
 
             current_time += self.euler_timestep_size
@@ -579,8 +1185,21 @@ class Spindle:
             # add the sums of these norms to the total_mt_length
             total_mt_length += np.sum(push_norms) + np.sum(pull_norms)
 
+            # metaphase plate (disk): MTs attached there draw from the same tubulin budget
+            for state, local, face_sign in [
+                (self.disk_push_state_front, self.disk_push_local, 1.0),
+                (self.disk_push_state_back, self.disk_push_local, -1.0),
+                (self.disk_pull_state_front, self.disk_pull_local, 1.0),
+                (self.disk_pull_state_back, self.disk_pull_local, -1.0),
+            ]:
+                connected = state == id
+                if not connected.any():
+                    continue
+                lab_pos, _, _, _, _ = self._disk_lab_frame(local[connected], face_sign)
+                total_mt_length += np.sum(normalize_vecs(lab_pos - self.mtoc_positions[id])[1])
+
         return total_mt_length
-    
+
 
     def calculate_num_mts(self):
 
@@ -588,15 +1207,22 @@ class Spindle:
         pull_mts = np.where(self.pull_state != 0)[0]
 
         num_mts = len(push_mts) + len(pull_mts)
+        num_mts += np.count_nonzero(self.disk_push_state_front)
+        num_mts += np.count_nonzero(self.disk_push_state_back)
+        num_mts += np.count_nonzero(self.disk_pull_state_front)
+        num_mts += np.count_nonzero(self.disk_pull_state_back)
+
         return num_mts
 
 
     def calculate_cost(self):
         """Calculates cost
-        This cost function has three term types: 
+        This cost function has four term types:
         1. a term penalizing the over or under use of tubulin;
         2. a collection of terms saying that each MTOC wants to be in the centre of the sphere;
         3. a collection of terms saying that each pair of MTOCs wants to be as far as possible from all other MTOCs.
+        4. terms saying the metaphase plate (disk) wants its centre of mass at the origin and its
+           normal e1 aligned with the lab +x axis (up to sign -- e1 and -e1 are the same plate).
 
         Returns:
             float: cost
@@ -605,7 +1231,9 @@ class Spindle:
         material_coefficient = 1
         centring_coefficient = 1
         no_net_force_coefficient = 1
-        
+        disk_position_coefficient = 10
+        disk_orientation_coefficient = 10
+
         cost = 0
         mtoc_ids = np.array(list(self.mtoc_positions.keys()))
 
@@ -627,13 +1255,43 @@ class Spindle:
         #     current_spindle_length += normalize_vecs((self.mtoc_positions[pair[0]] - self.mtoc_positions[pair[1]]))[1]
         # current_spindle_length = current_spindle_length / len(pairs)
 
-        # for two asters
+        # # for two asters
         # two_aster_spindle_length = normalize_vecs(self.mtoc_positions[1] - self.mtoc_positions[2])[1]
         # current_spindle_length = two_aster_spindle_length
 
         # cost += spatial_coefficient * np.square(1 - (current_spindle_length / self.spindle_length))
 
-        # # -- spindle centring -- 
+        # -- metaphase plate (disk) placement/orientation --
+        # desired: centre of mass at the origin, and e1 along the lab +x axis -- i.e. the disk
+        # standing "vertically", broadside to the MTOC axis, which is the pose that casts the
+        # largest shadow (boundary_sites_accessible).
+        #
+        # The penalty is the squared angle between e1 and that target axis, taken through abs():
+        # a plate's orientation is its *plane*, so e1 and -e1 are the same pose and the cost has
+        # to be even under e1 -> -e1. Scoring the (theta, phi) spherical angles of e1 against
+        # (pi/2, 0) instead -- as this used to -- made edge-on a trap: it rated e1 = -x (a
+        # perfectly broadside plate, normal merely flipped) at phi^2 = pi^2 ~ 9.87, four times
+        # worse than any edge-on pose at ~2.47, so past 90 deg the whole hemisphere was a basin
+        # whose floor sat *above* edge-on. phi is also discontinuous across the yz-plane and
+        # undefined at e1 = +/-z. The form below matches the old one across the +x hemisphere,
+        # but is smooth everywhere and increases monotonically as the shadow shrinks to nothing.
+        #
+        # Skipped entirely when the plate is disabled. These terms depend only on the pose, not
+        # on how many MTs are attached, so a disabled (never-moving) plate would otherwise add a
+        # constant to every state -- e.g. the default e1 = +z scores 100*(pi/2)^2 ~ 246.7. That
+        # constant cancels in the Metropolis-Hastings delta, but optimize() seeds old_cost with
+        # len(push_state), so on a lattice smaller than the constant nothing is ever accepted
+        # and the run exits after one attempt with no error.
+        if self.disk_enabled:
+            disk_normal_target = np.array([1.0, 0.0, 0.0])
+            disk_com_distance = normalize_vecs(self.disk_center)[1]
+            # angle from e1 to the nearest of +/-disk_normal_target, in [0, pi/2]
+            disk_tilt = np.arccos(np.clip(np.abs(np.dot(self.disk_e1, disk_normal_target)), 0.0, 1.0))
+
+            cost += disk_position_coefficient * np.square(disk_com_distance)
+            cost += disk_orientation_coefficient * np.square(disk_tilt)
+
+        # # -- spindle centring --
         # place the centre of the spindle at the origin
         # sum_positions = np.zeros(3)
         # for i in range(len(mtoc_ids)):
@@ -681,94 +1339,122 @@ class Spindle:
         
 
     def sample_spindle_update(self, add=None, mtoc_id=None):
+        """
+        Proposes a single MT attach/detach for optimize()'s Metropolis-Hastings loop.
+        Does not mutate any state itself -- it only decides and describes the change;
+        optimize() applies (and, on rejection, reverts) it.
 
-        # we want to choose push or pull, 
-        
+        Returns:
+            is_disk (bool): True if the target site is on the metaphase plate.
+            push (bool): True for a pushing-lattice site, False for a pulling-lattice site.
+            front (bool or None): which disk face (True = +e1, False = -e1); None when
+                is_disk is False (boundary sites have no face).
+            lattice_site (int): index within the relevant state array.
+            site_value: mtoc_id to attach, or 0 to detach.
+        """
+
         # choose whether to add or remove an MT
         if add is None:
             add = self.rng.choice([True, False], p=[0.5, 0.5]) # True -> add, False -> remove
 
         if add:
 
-            # choose an empty site to place an MT
-            empty_sites = np.where(self.push_state == 0)[0]
-
-            if empty_sites.size == 0: # avoiding self.rng errors
-                push = True
-                state = self.push_state
-                return push, 0, 0
-            
             # choose which mtoc we are nucleating from
             if mtoc_id is None:
                 mtoc_id = self.rng.choice(list(self.mtoc_positions.keys()))
+            mtoc_position = self.mtoc_positions[mtoc_id]
 
-            # -- spatially uniform sampling --
-            # site_to_fill = self.rng.choice(empty_sites)
-            # -- -- 
+            # -- gather every currently reachable, empty site across the boundary and the disk --
+            # pool_descriptors[i] = (is_disk, front, index_within_its_own_array), matched
+            # 1:1 with pool_positions[i]'s current lab-frame position
+            pool_positions = []
+            pool_descriptors = []
 
-            # # -- exponential length distributed sampling --
+            boundary_empty = np.where(self.push_state == 0)[0]
+            if boundary_empty.size > 0:
+                boundary_positions = self.push_lattice[boundary_empty]
+                if self.disk_shadowing_enabled:
+                    # drop boundary sites the disk currently blocks from this mtoc's view
+                    accessible = self.boundary_sites_accessible(mtoc_id, boundary_positions)
+                    boundary_empty = boundary_empty[accessible]
+                    boundary_positions = boundary_positions[accessible]
+                if boundary_empty.size > 0:
+                    pool_positions.append(boundary_positions)
+                    pool_descriptors.extend((False, None, idx) for idx in boundary_empty)
 
-            empty_site_distances = normalize_vecs(self.push_lattice[empty_sites] - self.mtoc_positions[mtoc_id])[1] # norms of difference vectors
-            length_probability = np.exp((-empty_site_distances / self.average_mt_length)) # calculate probabilities of an MT growing to be at least that long
+            # a disk face is only offered as a candidate if this mtoc sits on the side that
+            # can actually reach it in a straight line (is_disk_face_reachable)
+            for front, disk_state in (() if not self.disk_enabled else
+                                      ((True, self.disk_push_state_front), (False, self.disk_push_state_back))):
+                if not self.is_disk_face_reachable(mtoc_id, front=front):
+                    continue
+                disk_empty = np.where(disk_state == 0)[0]
+                if disk_empty.size == 0:
+                    continue
+                disk_positions, _, _, _, _ = self._disk_lab_frame(self.disk_push_local[disk_empty], 1.0 if front else -1.0)
+                pool_positions.append(disk_positions)
+                pool_descriptors.extend((True, front, idx) for idx in disk_empty)
+
+            if not pool_descriptors:
+                # nothing empty/reachable anywhere for this mtoc right now
+                return False, True, None, 0, 0
+
+            # -- exponential length distributed sampling, pooled across every candidate --
+            pool_positions = np.concatenate(pool_positions, axis=0)
+            candidate_distances = normalize_vecs(pool_positions - mtoc_position)[1] # norms of difference vectors
+            length_probability = np.exp(-candidate_distances / self.average_mt_length) # calculate probabilities of an MT growing to be at least that long
             site_selection_probabilities = length_probability / np.sum(length_probability) # normalize
 
-            site_to_fill = self.rng.choice(empty_sites, p=site_selection_probabilities)  # choose
-            # # -- --
+            chosen = self.rng.choice(len(pool_descriptors), p=site_selection_probabilities)
+            is_disk, front, index = pool_descriptors[chosen]
 
-            # -- push or pull
-            # if site_to_fill is within the capture radius
-            push = True
-            if site_to_fill in self.push_to_pull.keys():
-                if self.pull_state[self.push_to_pull[site_to_fill]] == 0:
+            # -- push or pull: promote to the nearby motor if site_to_fill is within the capture radius --
+            if is_disk:
+                promote_map = self.disk_push_to_pull_front if front else self.disk_push_to_pull_back
+                disk_pull_state = self.disk_pull_state_front if front else self.disk_pull_state_back
+                push = True
+                if index in promote_map and disk_pull_state[promote_map[index]] == 0:
                     push = False
-                    site_to_fill = self.push_to_pull[site_to_fill]
-
-            # if push:
-            #     state = self.push_state.copy()
-            # else:
-            #     state = self.pull_state.copy()
-
-            # state[site_to_fill] = mtoc_id
-
-            lattice_site = site_to_fill
-            site_value = mtoc_id
-            
-        else: # remove
-            # choose uniformly which MT to remove
-            # choose to remove from push or pull weighted by the proportion of MTs which are pushing or pulling
-            num_pushing = len(self.push_state[self.push_state != 0])
-            num_pulling = len(self.pull_state[self.pull_state != 0])
-
-            numerator = num_pushing + num_pulling
-            if numerator == 0:
-                numerator = 1
-
-            p_push = num_pushing / numerator
-            push = self.rng.choice([True, False], p=[p_push, 1-p_push]) # True -> add, False -> remove
-
-            if push:
-                state = self.push_state.copy()
+                    index = promote_map[index]
             else:
-                state = self.pull_state.copy()
+                push = True
+                if index in self.push_to_pull and self.pull_state[self.push_to_pull[index]] == 0:
+                    push = False
+                    index = self.push_to_pull[index]
 
-            # choose a filled site to empty 
+            return is_disk, push, front, index, mtoc_id
+
+        else: # remove
+            # choose which pool to remove from, weighted by the proportion of MTs currently in
+            # each of the six pools (boundary push/pull, disk push/pull x front/back)
+            pools = [
+                (False, True, None, self.push_state),
+                (False, False, None, self.pull_state),
+            ]
+            # with the plate disabled the four disk pools are permanently empty; leaving them in
+            # would still hand them 4/6 of the draw whenever nothing is attached anywhere, and
+            # each such draw is a wasted attempt against the num_attempts budget
+            if self.disk_enabled:
+                pools += [
+                    (True, True, True, self.disk_push_state_front),
+                    (True, True, False, self.disk_push_state_back),
+                    (True, False, True, self.disk_pull_state_front),
+                    (True, False, False, self.disk_pull_state_back),
+                ]
+            counts = np.array([np.count_nonzero(state) for _, _, _, state in pools], dtype=float)
+            total = counts.sum()
+            probabilities = np.full(len(pools), 1.0 / len(pools)) if total == 0 else counts / total
+
+            is_disk, push, front, state = pools[self.rng.choice(len(pools), p=probabilities)]
+
+            # choose a filled site to empty, uniformly at random within the chosen pool
             filled_sites = np.where(state != 0)[0]
+            if filled_sites.size == 0: # avoiding self.rng errors / nothing to remove in this pool
+                return False, True, None, 0, 0
 
-            if filled_sites.size == 0: # avoiding self.rng errors
-                return push, 0, 0
-
-            # choose from uniform distribution
             site_to_empty = self.rng.choice(filled_sites)
 
-            # empty sites are set to 0
-            state[site_to_empty] = 0
-
-            lattice_site = site_to_empty
-            site_value = 0
-
-        return push, lattice_site, site_value
-        
-        # return push, state
+            return is_disk, push, front, site_to_empty, 0
 
 
     def optimize(self, total_attempts, save_batch_size=1000, max_lab_time=None):
@@ -780,11 +1466,15 @@ class Spindle:
 
         initial_cost = len(self.push_state) # setting initial cost to be very high
         old_mtoc_positions = self.mtoc_positions.copy() # initial original state is the current state
+        old_disk_center = self.disk_center.copy()
+        old_disk_e1, old_disk_e2, old_disk_e3 = self.disk_e1.copy(), self.disk_e2.copy(), self.disk_e3.copy()
         old_cost = initial_cost # any stable position is an improvement
         old_time = np.copy(self.time)
         # trace will be saved every save_batch_size accepted states.
-        # the spindle_trace tracks the changes in the spindle
+        # the spindle_trace tracks changes to the boundary; disk_spindle_trace is a separate,
+        # parallel log for changes to the metaphase plate (see multi_aster_spindle.py plan notes)
         spindle_trace = []
+        disk_spindle_trace = []
 
         # # accepted_states is a list where each element is the tuple (push_state, pull_state)
         # accepted_pull_states = []
@@ -794,19 +1484,23 @@ class Spindle:
         def flush_accepted_states():
             """Persist the accumulated accepted states as a batch and reset the buffers."""
             # nonlocal accepted_push_states, accepted_pull_states, num_accepted_states_at_empty
-            nonlocal spindle_trace, num_accepted_states_at_empty
-            if not spindle_trace:
+            nonlocal spindle_trace, disk_spindle_trace, num_accepted_states_at_empty
+            if not spindle_trace and not disk_spindle_trace:
                 return
 
             start = num_accepted_states_at_empty
             end = self.num_accepted_states
-            np.save(os.path.join(self.spindle_trace_path, f'spindle_trace_{start}_{end}.npy' ), np.array(spindle_trace))
+            if spindle_trace:
+                np.save(os.path.join(self.spindle_trace_path, f'spindle_trace_{start}_{end}.npy' ), np.array(spindle_trace))
+            if disk_spindle_trace:
+                np.save(os.path.join(self.spindle_trace_path, f'disk_trace_{start}_{end}.npy'), np.array(disk_spindle_trace))
             # np.save(os.path.join(self.spindle_trace_path, trace_batch_name('push', start, end)), np.array(accepted_push_states))
             # np.save(os.path.join(self.spindle_trace_path, trace_batch_name('pull', start, end)), np.array(accepted_pull_states))
 
             # accepted_push_states = []
             # accepted_pull_states = []
             spindle_trace = []
+            disk_spindle_trace = []
             num_accepted_states_at_empty = np.copy(self.num_accepted_states)
 
             # keep the experiment-level counters in sync with what's on disk
@@ -858,12 +1552,19 @@ class Spindle:
                     else:
                         outer_table.add_row('Last Accepted Time (s)', str(old_time)) # last stable time
                     outer_table.add_row('Last Accepted Position (um)', str(old_mtoc_positions)) # last stable position
-                    outer_table.add_row('Spindle Length (um)', f'{normalize_vecs(self.mtoc_positions[1] - self.mtoc_positions[2])[1]} / {self.spindle_length}') # tubulin use / tubulin budget
+                    if self.disk_enabled:
+                        outer_table.add_row('Disk Centre (um)', str(old_disk_center)) # last stable disk position
+                        outer_table.add_row('Disk Normal (e1)', str(old_disk_e1)) # last stable disk orientation
+                    if len(list(self.mtoc_positions.keys())) == 2:
+                        outer_table.add_row('Spindle Length (um)', f'{normalize_vecs(self.mtoc_positions[1] - self.mtoc_positions[2])[1]} / {self.spindle_length}') # tubulin use / tubulin budget
                     outer_table.add_row('Net Force on aster 1 (pN)', f'{self.calc_mtoc_velocity(1)*self.cytoplasmic_drag_factor}') # force vector on MTOC
                     outer_table.add_row('Last Accepted Cost', str(old_cost)) # last accepted cost
-                    outer_table.add_row('Number of MTs', str(self.calculate_num_mts())) # number of MTs
-                    outer_table.add_row('Number of pushing MTs', str(len(self.push_state[self.push_state != 0]))) # number of pushing MTs
-                    outer_table.add_row('Number of pulling MTs', str(len(self.pull_state[self.pull_state != 0]))) # number of pulling MTs
+                    outer_table.add_row('Total number of MTs', str(self.calculate_num_mts())) # cortical + chromosomal, push + pull
+                    outer_table.add_row('Number of cortical pushing MTs', str(np.count_nonzero(self.push_state))) # boundary push sites
+                    outer_table.add_row('Number of cortical pulling MTs', str(np.count_nonzero(self.pull_state))) # boundary pull sites
+                    if self.disk_enabled:
+                        outer_table.add_row('Number of chromosomal pushing MTs', str(np.count_nonzero(self.disk_push_state_front) + np.count_nonzero(self.disk_push_state_back))) # disk push sites, both faces
+                        outer_table.add_row('Number of chromosomal pulling MTs', str(np.count_nonzero(self.disk_pull_state_front) + np.count_nonzero(self.disk_pull_state_back))) # disk pull sites, both faces
                     outer_table.add_row('Tubulin use / tubulin budget (um)', f'{self.calculate_tubulin_use()} / {self.tubulin_budget}') # tubulin use / tubulin budget
                     outer_table.add_row('Attempt Counter', str(attempt_counter)) # attempt counter
                     outer_table.add_row('Number of total attempts', f"{self.num_attempts} / {total_attempts}")
@@ -877,30 +1578,34 @@ class Spindle:
                     live.update(outer_table)
 
                     # update meta-spindle-state
-                    # push, new_state = self.sample_spindle_update()
-                    push, lattice_site, site_value = self.sample_spindle_update()
+                    is_disk, push, front, lattice_site, site_value = self.sample_spindle_update()
 
-                    if push:
-                        old_site_value = self.push_state[lattice_site]
-                        self.push_state[lattice_site] = site_value
-                    else:
-                        old_site_value = self.pull_state[lattice_site]
-                        self.pull_state[lattice_site] = site_value
+                    target_state = self._resolve_state_array(is_disk, push, front)
+                    old_site_value = target_state[lattice_site]
+                    target_state[lattice_site] = site_value
 
                     attempt_counter += 1
                     self.num_attempts +=1
 
-                    # evolve time for metastate
+                    # evolve time for metastate. time_evolution mutates disk_center/e1/e2/e3 in
+                    # place as it integrates the disk's EOM, so unlike mtoc_positions (which is
+                    # only committed below on acceptance) its pose must be snapshotted here and
+                    # explicitly restored on rejection, below.
                     new_mtoc_positions, meta_boundary_violated, meta_trajectory  = self.time_evolution()
-                    
+
                     # set new mtoc_positions
                     self.mtoc_positions = new_mtoc_positions
+
+                    # the plate has just moved, so cut off any MT it now blocks before
+                    # costing this state -- a shadowed MT must stop contributing force and
+                    # tubulin, and the optimizer should see that consequence of the new pose
+                    culled = self.cull_shadowed_microtubules()
 
                     meta_cost = self.calculate_cost()
                     meta_time = self.time + self.evolution_time
 
                     # -- simulated annealing --
-                    
+
                     # states which violated the boundary are always rejected
                     # otherwise, we follow Metropolis-Hastings style simulated annealing
                     if meta_cost < old_cost and not meta_boundary_violated:
@@ -914,22 +1619,48 @@ class Spindle:
 
                     # reverse metastate if the spindle modification is not acceptable
                     if not acceptable:
+                        # unwind in reverse order: the cull ran after the sampled change, and
+                        # may have cleared that very site (nucleated onto a site the moved plate
+                        # then blocked). Putting the cull back first lets the single-element
+                        # restore below have the final say on that site.
+                        for culled_is_disk, culled_push, culled_front, culled_site, culled_value in culled:
+                            self._resolve_state_array(culled_is_disk, culled_push, culled_front)[culled_site] = culled_value
                         # restore only the single element that was changed
-                        if push:
-                            self.push_state[lattice_site] = old_site_value
-                        else:
-                            self.pull_state[lattice_site] = old_site_value
-                        # reset mtoc positions
+                        target_state[lattice_site] = old_site_value
+                        # reset mtoc positions and disk pose
                         self.mtoc_positions = old_mtoc_positions
+                        self.disk_center = old_disk_center
+                        self.disk_e1, self.disk_e2, self.disk_e3 = old_disk_e1, old_disk_e2, old_disk_e3
 
-                # -- back in outer loop, saving new accepted position -- 
+                # the inner loop also exits when the attempt/lab-time budget runs out with
+                # nothing accepted. That last state was rejected and fully reverted, so it is
+                # not a new accepted state: committing it here would log the rejected change
+                # (and the shadow cull that went with it) to the trace as though it happened,
+                # leaving a replay one site out of step with the run.
+                if not acceptable:
+                    break
+
+                # -- back in outer loop, saving new accepted position --
                 # current mtoc positions and spindle states become old mtoc positions and spindle states
                 old_mtoc_positions = self.mtoc_positions.copy() # this is the current metastate position
+                old_disk_center = self.disk_center.copy()
+                old_disk_e1, old_disk_e2, old_disk_e3 = self.disk_e1.copy(), self.disk_e2.copy(), self.disk_e3.copy()
                 old_cost = meta_cost
                 old_time = meta_time
                 self.time = meta_time
                 if self.save:
-                    spindle_trace.append((push, lattice_site, site_value))
+                    if is_disk:
+                        disk_spindle_trace.append((push, front, lattice_site, site_value))
+                    else:
+                        spindle_trace.append((push, lattice_site, site_value))
+                    # the shadow cull is part of this accepted state, so it has to reach the
+                    # traces too -- otherwise a replay (occupancy/lifetime plots) keeps MTs the
+                    # run itself cut off
+                    for culled_is_disk, culled_push, culled_front, culled_site, _ in culled:
+                        if culled_is_disk:
+                            disk_spindle_trace.append((culled_push, culled_front, culled_site, 0))
+                        else:
+                            spindle_trace.append((culled_push, culled_site, 0))
 
                 self.num_accepted_states += 1
                 attempt_counter = 0
@@ -949,6 +1680,22 @@ class Spindle:
                         'num_mts': self.calculate_num_mts(),
                         'total_force': total_force,
                     }
+                    # metaphase plate (disk) snapshot, for animate_mtoc_trajectory. Position/
+                    # orientation change every accepted step (time_evolution's EOM); occupancy
+                    # changes whenever sample_spindle_update picks a disk site this step.
+                    # Omitted when the plate is disabled -- it never moves and holds nothing, so
+                    # the keys would be dead weight on every accepted step.
+                    if self.disk_enabled:
+                        timepoint_data.update({
+                            'disk_center': self.disk_center.copy(),
+                            'disk_e1': self.disk_e1.copy(),
+                            'disk_e2': self.disk_e2.copy(),
+                            'disk_e3': self.disk_e3.copy(),
+                            'disk_push_state_front': self.disk_push_state_front.copy(),
+                            'disk_push_state_back': self.disk_push_state_back.copy(),
+                            'disk_pull_state_front': self.disk_pull_state_front.copy(),
+                            'disk_pull_state_back': self.disk_pull_state_back.copy(),
+                        })
                     self.trajectory[self.time] = timepoint_data
 
 
@@ -1024,7 +1771,7 @@ class Spindle:
 
         # plotting separation
         ax2.plot(times, aster_separations, label='distance between asters')
-        ax2.set_ylim([0, 2 * self.boundary_radius])
+        ax2.set_ylim([0, 2* self.boundary_radius])
         ax2.set_ylabel('aster separation (um)')
         ax2.set_xlabel('time (s)')
 
@@ -1061,7 +1808,7 @@ class Spindle:
 
         fig, ax = plt.subplots(figsize=(6, 3))
         for i, mtoc_id in enumerate(mtoc_ids):
-            ax.plot(times, distances[mtoc_id], color=colors[i % len(colors)], label=f'aster {mtoc_id} distance from centre')
+            ax.plot(times, distances[mtoc_id], color=colors[i % len(colors)], label=f'aster {mtoc_id} distance from centre\n mean={np.round(np.mean(distances[mtoc_id]), 3)} +/- {np.round(np.std(distances[mtoc_id]), 3)}')
         ax.set_ylabel('Distance (um)')
         ax.set_ylim([0, self.boundary_radius])
         ax.set_xlabel('time (s)')
@@ -1072,6 +1819,114 @@ class Spindle:
         plt.savefig(plot_path)
         plt.close()
         print(f'aster distance from centre saved to {plot_path}')
+
+    def _disk_pose_history(self, start_time=None, end_time=None):
+        """
+        Pull the recorded disk pose out of self.trajectory.
+
+        Returns:
+            times (list[float]), centers (N, 3) array, normals (N, 3) array of e1.
+        Raises:
+            ValueError: if the plate is disabled, the trajectory is empty, or the trajectory
+                predates disk pose tracking.
+        """
+        if not self.disk_enabled:
+            raise ValueError('this spindle was built with disk_enabled=False, so it has no disk pose history')
+
+        times = list(self.trajectory.keys())
+        if start_time is not None:
+            times = [t for t in times if t >= start_time]
+        if end_time is not None:
+            times = [t for t in times if t <= end_time]
+        if not times:
+            raise ValueError('no trajectory timepoints in the requested time window')
+        if 'disk_center' not in self.trajectory[times[0]]:
+            raise ValueError('this trajectory has no recorded disk pose (it predates disk tracking)')
+
+        centers = np.array([self.trajectory[t]['disk_center'] for t in times], dtype=float)
+        normals = np.array([self.trajectory[t]['disk_e1'] for t in times], dtype=float)
+        return times, centers, normals
+
+    def plot_disk_distance_from_centre(self, start_time=None, end_time=None, save_path=None):
+        """
+        Distance of the disk centre of mass from the origin, |R_D|, vs time.
+
+        Args:
+            start_time (float): if given, restrict x-axis to times >= start_time
+            end_time (float): if given, restrict x-axis to times <= end_time
+            save_path (str): if given, write the figure here instead of plot_folder_path
+
+        Returns:
+            None. No-op (with a printed note) when the plate is disabled, so a driver script
+            can call the whole plotting suite unconditionally.
+        """
+        if not self.disk_enabled:
+            print('disk_enabled=False -- skipping plot_disk_distance_from_centre')
+            return
+
+        times, centers, _ = self._disk_pose_history(start_time, end_time)
+        distances = np.linalg.norm(centers, axis=1)
+
+        fig, ax = plt.subplots(figsize=(6, 3))
+        ax.plot(times, distances, color='tab:purple',
+                label=f'disk distance from centre\n mean={np.round(np.mean(distances), 3)} +/- {np.round(np.std(distances), 3)}')
+        ax.set_ylabel('|R_D| (um)')
+        ax.set_ylim([0, self.boundary_radius])
+        ax.set_xlabel('time (s)')
+        ax.legend()
+        fig.tight_layout()
+
+        if save_path is None:
+            save_path = os.path.join(self.plot_folder_path, 'disk_distance_from_centre.png')
+        plt.savefig(save_path)
+        plt.close()
+        print(f'disk distance from centre saved to {save_path}')
+
+    def plot_disk_orientation(self, start_time=None, end_time=None, save_path=None, unwrap_phi=False):
+        """
+        Spherical angles of the disk unit normal e1 vs time, using the standard
+        convention theta = arccos(e1_z) in [0, pi] (inclination from +z) and
+        phi = arctan2(e1_y, e1_x) in (-pi, pi] (azimuth in the xy-plane).
+
+        Args:
+            start_time (float): if given, restrict x-axis to times >= start_time
+            end_time (float): if given, restrict x-axis to times <= end_time
+            save_path (str): if given, write the figure here instead of plot_folder_path
+            unwrap_phi (bool): if True, unwrap phi so the trace is continuous
+                instead of jumping by 2*pi at the +/-pi branch cut
+
+        Returns:
+            None. No-op (with a printed note) when the plate is disabled.
+        """
+        if not self.disk_enabled:
+            print('disk_enabled=False -- skipping plot_disk_orientation')
+            return
+
+        times, _, normals = self._disk_pose_history(start_time, end_time)
+        normals = normals / np.linalg.norm(normals, axis=1, keepdims=True)
+
+        theta = np.arccos(np.clip(normals[:, 2], -1.0, 1.0))
+        phi = np.arctan2(normals[:, 1], normals[:, 0])
+        if unwrap_phi:
+            phi = np.unwrap(phi)
+
+        fig, ax = plt.subplots(figsize=(6, 3))
+        ax.plot(times, theta, color='tab:blue', label='theta (inclination from +z)')
+        ax.plot(times, phi, color='tab:orange', label='phi (azimuth in xy-plane)')
+        ax.set_ylabel('angle (rad)')
+        ax.set_xlabel('time (s)')
+        if not unwrap_phi:
+            ax.set_ylim([-np.pi - 0.1, np.pi + 0.1])
+            ax.set_yticks([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
+            ax.set_yticklabels([r'$-\pi$', r'$-\pi/2$', '0', r'$\pi/2$', r'$\pi$'])
+        ax.legend()
+        fig.tight_layout()
+
+        if save_path is None:
+            save_path = os.path.join(self.plot_folder_path, 'disk_orientation.png')
+        plt.savefig(save_path)
+        plt.close()
+        print(f'disk orientation saved to {save_path}')
 
     def plot_surface_occupancy(self, mtoc_id, start_time, end_time, show_occupancy='pull'):
         """
@@ -1203,12 +2058,6 @@ class Spindle:
             push_counts (dict[int, np.ndarray]): mtoc_id -> array of pushing MT counts at each step
             pull_counts (dict[int, np.ndarray]): mtoc_id -> array of pulling MT counts at each step
         """
-        spindle_trace_dir = os.path.join(self.dir_path, 'spindle_trace')
-        trace_files = sorted(
-            glob.glob(os.path.join(spindle_trace_dir, 'spindle_trace_*.npy')),
-            key=lambda f: int(os.path.basename(f).split('_')[2])
-        )
-
         mtoc_ids = sorted(self.mtoc_positions.keys())
         push_state = np.zeros(self.num_push_sites)
         pull_state = np.zeros(self.num_pull_sites)
@@ -1217,19 +2066,15 @@ class Spindle:
         push_counts = {mtoc_id: [] for mtoc_id in mtoc_ids}
         pull_counts = {mtoc_id: [] for mtoc_id in mtoc_ids}
 
-        delta_idx = 0
-        for trace_file in trace_files:
-            changes = np.load(trace_file, allow_pickle=True)
-            for push, lattice_site, site_value in changes:
-                if push:
-                    push_state[int(lattice_site)] = site_value
-                else:
-                    pull_state[int(lattice_site)] = site_value
-                delta_idx += 1
-                times.append(delta_idx * self.evolution_time)
-                for mtoc_id in mtoc_ids:
-                    push_counts[mtoc_id].append(np.sum(push_state == mtoc_id))
-                    pull_counts[mtoc_id].append(np.sum(pull_state == mtoc_id))
+        for global_idx, (push, lattice_site, site_value) in self._replay_trace('spindle_trace'):
+            if push:
+                push_state[int(lattice_site)] = site_value
+            else:
+                pull_state[int(lattice_site)] = site_value
+            times.append(global_idx * self.evolution_time)
+            for mtoc_id in mtoc_ids:
+                push_counts[mtoc_id].append(np.sum(push_state == mtoc_id))
+                pull_counts[mtoc_id].append(np.sum(pull_state == mtoc_id))
 
         times = np.array(times)
         for mtoc_id in mtoc_ids:
@@ -1295,6 +2140,118 @@ class Spindle:
 
         return times, push_counts, pull_counts
 
+    def calculate_num_disk_mts_per_mtoc_over_time(self):
+        """
+        Reconstructs the number of pushing and pulling MTs attached to the
+        metaphase plate (disk) for each MTOC at every accepted simulation
+        step, by replaying the disk_trace (see optimize()). Front and back
+        faces are combined into a single count per MTOC.
+
+        Returns:
+            times (np.ndarray): time (s) of each step
+            push_counts (dict[int, np.ndarray]): mtoc_id -> array of disk pushing MT counts at each step
+            pull_counts (dict[int, np.ndarray]): mtoc_id -> array of disk pulling MT counts at each step
+
+        Raises:
+            ValueError: if the plate is disabled, in which case no disk_trace was ever written.
+        """
+        if not self.disk_enabled:
+            raise ValueError('this spindle was built with disk_enabled=False, so no disk MTs were ever attached')
+
+        mtoc_ids = sorted(self.mtoc_positions.keys())
+        push_state_front = np.zeros(self.num_disk_push_sites)
+        push_state_back = np.zeros(self.num_disk_push_sites)
+        pull_state_front = np.zeros(self.num_disk_pull_sites)
+        pull_state_back = np.zeros(self.num_disk_pull_sites)
+
+        times = []
+        push_counts = {mtoc_id: [] for mtoc_id in mtoc_ids}
+        pull_counts = {mtoc_id: [] for mtoc_id in mtoc_ids}
+
+        for global_idx, (push, front, lattice_site, site_value) in self._replay_trace('disk_trace'):
+            if push:
+                state = push_state_front if front else push_state_back
+            else:
+                state = pull_state_front if front else pull_state_back
+            state[int(lattice_site)] = site_value
+            times.append(global_idx * self.evolution_time)
+            for mtoc_id in mtoc_ids:
+                push_counts[mtoc_id].append(np.sum(push_state_front == mtoc_id) + np.sum(push_state_back == mtoc_id))
+                pull_counts[mtoc_id].append(np.sum(pull_state_front == mtoc_id) + np.sum(pull_state_back == mtoc_id))
+
+        times = np.array(times)
+        for mtoc_id in mtoc_ids:
+            push_counts[mtoc_id] = np.array(push_counts[mtoc_id])
+            pull_counts[mtoc_id] = np.array(pull_counts[mtoc_id])
+
+        return times, push_counts, pull_counts
+
+    def plot_num_disk_mts_per_mtoc(self, save_path=None, stride=1, force='both', start_time=None, end_time=None, ylim=None):
+        """
+        Same as plot_num_mts_per_mtoc, but for MTs attached to the metaphase
+        plate (disk) instead of the boundary, combining front and back faces.
+
+        Args:
+            start_time (float): if given, restrict x-axis to times >= start_time
+            end_time (float): if given, restrict x-axis to times <= end_time
+            ylim (tuple): if given, (ymin, ymax) limits for the # MTs attached axis
+
+        Returns:
+            (times, push_counts, pull_counts), or None when the plate is disabled.
+        """
+        if not self.disk_enabled:
+            print('disk_enabled=False -- skipping plot_num_disk_mts_per_mtoc')
+            return
+
+        if force == 'both':
+            show_push = True
+            show_pull = True
+        elif force == 'push':
+            show_push = True
+            show_pull = False
+        elif force == 'pull':
+            show_push = False
+            show_pull = True
+
+        times, push_counts, pull_counts = self.calculate_num_disk_mts_per_mtoc_over_time()
+
+        mtoc_ids = sorted(push_counts.keys())
+
+        mask = np.ones_like(times, dtype=bool)
+        if start_time is not None:
+            mask &= times >= start_time
+        if end_time is not None:
+            mask &= times <= end_time
+        times = times[mask]
+        push_counts = {mtoc_id: push_counts[mtoc_id][mask] for mtoc_id in mtoc_ids}
+        pull_counts = {mtoc_id: pull_counts[mtoc_id][mask] for mtoc_id in mtoc_ids}
+
+        num_mtocs = len(mtoc_ids)
+        shades = np.linspace(0.4, 0.9, num_mtocs) if num_mtocs > 1 else np.array([0.7])
+        push_colors = plt.cm.Blues(shades)
+        pull_colors = plt.cm.Reds(shades)
+
+        fig, ax = plt.subplots(figsize=(6, 3))
+        for i, mtoc_id in enumerate(mtoc_ids):
+            if show_push:
+                ax.plot(times[::stride], push_counts[mtoc_id][::stride], color=push_colors[i], alpha=1, label=f'MTOC {mtoc_id} pushing (disk)')
+            if show_pull:
+                ax.plot(times[::stride], pull_counts[mtoc_id][::stride], color=pull_colors[i], alpha=1, label=f'MTOC {mtoc_id} pulling (disk)')
+        ax.set_xlabel('time (s)')
+        ax.set_ylabel('# MTs attached (disk)')
+        if ylim is not None:
+            ax.set_ylim(ylim)
+        ax.legend()
+        fig.tight_layout()
+
+        if save_path is None:
+            save_path = os.path.join(self.plot_folder_path, 'num_disk_mts_per_mtoc.png')
+        plt.savefig(save_path)
+        plt.close()
+        print(f'# disk MTs per MTOC plot saved to {save_path}')
+
+        return times, push_counts, pull_counts
+
     def plot_pull_to_push_ratio(self, save_path=None, stride=1, per_mtoc=False, start_time=None, end_time=None):
         """
         Plots the ratio of pulling MTs to pushing MTs over time.
@@ -1351,71 +2308,94 @@ class Spindle:
 
         return times, total_ratio, mean_ratio, std_ratio
 
-    def calculate_motor_occupancy(self, mtoc_id, start_time, end_time):
+    def _trace_batches(self, prefix):
+        """
+        The batch files of one trace log, in simulation order, as
+        (start, end, changes): start/end are the global accepted-state indices
+        the batch spans -- flush_accepted_states() encodes them in the filename
+        -- and changes is the loaded array of rows.
+        """
+        spindle_trace_dir = os.path.join(self.dir_path, 'spindle_trace')
 
+        def batch_range(path):
+            start, end = os.path.splitext(os.path.basename(path))[0].split('_')[-2:]
+            return int(start), int(end)
+
+        paths = sorted(glob.glob(os.path.join(spindle_trace_dir, f'{prefix}_*.npy')), key=batch_range)
+        for path in paths:
+            start, end = batch_range(path)
+            yield start, end, np.load(path, allow_pickle=True)
+
+    def _replay_trace(self, prefix):
+        """
+        Yields (global_idx, change) for every row of one trace log, where
+        global_idx is the accepted-state index (i.e. time / evolution_time) the
+        change belongs to.
+
+        Every accepted step advances the clock by evolution_time but appends
+        its change to exactly one of the two logs -- spindle_trace for boundary
+        sites, disk_trace for metaphase-plate sites (see optimize()). A row's
+        position within its own log is therefore *not* the global step index:
+        counting rows makes the reconstructed time axis lag the simulation by
+        the fraction of steps that went to the other log, so late-time windows
+        run off the end of the log and read as empty. Each batch filename
+        records the global range it covers, so anchor on those and spread a
+        batch's rows evenly across its range (how the two logs interleave
+        within a batch isn't recorded).
+        """
+        for start, end, changes in self._trace_batches(prefix):
+            num_rows = len(changes)
+            if num_rows == 0:
+                continue
+            span = max(end - start, num_rows)
+            for i, change in enumerate(changes):
+                yield start + (i * span) // num_rows, change
+
+    def _calculate_occupancy(self, mtoc_id, start_time, end_time, push):
+        """
+        Fraction of the accepted steps in [start_time, end_time] during which
+        each site of the push (push=True) or pull (push=False) boundary lattice
+        was held by mtoc_id.
+        """
         start_idx = int(np.round(start_time, 4) / self.evolution_time)
         end_idx = int(np.round(end_time, 4) / self.evolution_time)
 
-        spindle_trace_dir = os.path.join(self.dir_path, 'spindle_trace')
-        trace_files = sorted(
-            glob.glob(os.path.join(spindle_trace_dir, 'spindle_trace_*.npy')),
-            key=lambda f: int(os.path.basename(f).split('_')[2])
-        )
+        num_sites = self.num_push_sites if push else self.num_pull_sites
+        state = np.zeros(num_sites)
+        occupancy = np.zeros(num_sites)
 
-        pull_state = np.zeros(self.num_pull_sites)
-        occupancy = np.zeros(self.num_pull_sites)
-        delta_idx = 0
-
-        for trace_file in trace_files:
-            changes = np.load(trace_file, allow_pickle=True)
-            for push, lattice_site, site_value in changes:
-                if delta_idx >= end_idx:
-                    break
-                if delta_idx >= start_idx:
-                    occupancy += (pull_state == mtoc_id).astype(int)
-                if not push:
-                    pull_state[int(lattice_site)] = site_value
-                delta_idx += 1
-            if delta_idx >= end_idx:
+        # a state persists from its own change until the next one, which is
+        # generally more than a single step: the steps in between updated the
+        # disk instead, and their rows live in the other log. So weight each
+        # state by the number of global steps it actually held for, which is
+        # what normalizing by (end_idx - start_idx) below assumes.
+        prev_idx = 0
+        for global_idx, (is_push, lattice_site, site_value) in self._replay_trace('spindle_trace'):
+            dwell = min(global_idx, end_idx) - max(prev_idx, start_idx)
+            if dwell > 0:
+                occupancy += dwell * (state == mtoc_id)
+            if global_idx >= end_idx:
                 break
+            if is_push == push:
+                state[int(lattice_site)] = site_value
+            prev_idx = global_idx
+        else:
+            # the log ended before end_idx (a trailing batch that never filled,
+            # see optimize()) -- its final state holds for the rest of the window
+            dwell = end_idx - max(prev_idx, start_idx)
+            if dwell > 0:
+                occupancy += dwell * (state == mtoc_id)
 
         num_states = end_idx - start_idx
         if num_states > 0:
             occupancy = occupancy / num_states
         return occupancy
+
+    def calculate_motor_occupancy(self, mtoc_id, start_time, end_time):
+        return self._calculate_occupancy(mtoc_id, start_time, end_time, push=False)
 
     def calculate_push_occupancy(self, mtoc_id, start_time, end_time):
-
-        start_idx = int(np.round(start_time, 4) / self.evolution_time)
-        end_idx = int(np.round(end_time, 4) / self.evolution_time)
-
-        spindle_trace_dir = os.path.join(self.dir_path, 'spindle_trace')
-        trace_files = sorted(
-            glob.glob(os.path.join(spindle_trace_dir, 'spindle_trace_*.npy')),
-            key=lambda f: int(os.path.basename(f).split('_')[2])
-        )
-
-        push_state = np.zeros(self.num_push_sites)
-        occupancy = np.zeros(self.num_push_sites)
-        delta_idx = 0
-
-        for trace_file in trace_files:
-            changes = np.load(trace_file, allow_pickle=True)
-            for push, lattice_site, site_value in changes:
-                if delta_idx >= end_idx:
-                    break
-                if delta_idx >= start_idx:
-                    occupancy += (push_state == mtoc_id).astype(int)
-                if push:
-                    push_state[int(lattice_site)] = site_value
-                delta_idx += 1
-            if delta_idx >= end_idx:
-                break
-
-        num_states = end_idx - start_idx
-        if num_states > 0:
-            occupancy = occupancy / num_states
-        return occupancy
+        return self._calculate_occupancy(mtoc_id, start_time, end_time, push=True)
 
     def _calculate_lifetime_samples(self, mtoc_id, start_time, end_time, push):
         """
@@ -1434,37 +2414,25 @@ class Spindle:
         start_idx = int(np.round(start_time, 4) / self.evolution_time)
         end_idx = int(np.round(end_time, 4) / self.evolution_time)
 
-        spindle_trace_dir = os.path.join(self.dir_path, 'spindle_trace')
-        trace_files = sorted(
-            glob.glob(os.path.join(spindle_trace_dir, 'spindle_trace_*.npy')),
-            key=lambda f: int(os.path.basename(f).split('_')[2])
-        )
-
         num_sites = self.num_push_sites if push else self.num_pull_sites
         state = np.zeros(num_sites)
         birth_time = np.full(num_sites, np.nan)
         site_indices = []
         lifetimes = []
-        delta_idx = 0
 
-        for trace_file in trace_files:
-            changes = np.load(trace_file, allow_pickle=True)
-            for is_push, lattice_site, site_value in changes:
-                if delta_idx >= end_idx:
-                    break
-                if is_push == push:
-                    lattice_site = int(lattice_site)
-                    current_time = delta_idx * self.evolution_time
-                    old_value = state[lattice_site]
-                    if site_value != 0 and old_value == 0:
-                        birth_time[lattice_site] = current_time
-                    elif site_value == 0 and old_value == mtoc_id and delta_idx >= start_idx:
-                        site_indices.append(lattice_site)
-                        lifetimes.append(current_time - birth_time[lattice_site])
-                    state[lattice_site] = site_value
-                delta_idx += 1
-            if delta_idx >= end_idx:
+        for global_idx, (is_push, lattice_site, site_value) in self._replay_trace('spindle_trace'):
+            if global_idx >= end_idx:
                 break
+            if is_push == push:
+                lattice_site = int(lattice_site)
+                current_time = global_idx * self.evolution_time
+                old_value = state[lattice_site]
+                if site_value != 0 and old_value == 0:
+                    birth_time[lattice_site] = current_time
+                elif site_value == 0 and old_value == mtoc_id and global_idx >= start_idx:
+                    site_indices.append(lattice_site)
+                    lifetimes.append(current_time - birth_time[lattice_site])
+                state[lattice_site] = site_value
 
         return np.array(site_indices, dtype=int), np.array(lifetimes)
 
@@ -1657,7 +2625,12 @@ class Spindle:
         show_push = show_occupancy in ('push', 'both')
 
         print(list(self.trajectory.keys())[-1])
-        times = sorted(list(self.trajectory.keys())[:-1000])
+        times = sorted(self.trajectory.keys())
+        # drop the most recent 1000 raw trajectory keys (their trailing tail can still be in
+        # flux) -- but only if there are enough entries to spare, so short trajectories aren't
+        # emptied out entirely
+        if len(times) > 1000:
+            times = times[:-1000]
         if start_time is not None:
             times = [t for t in times if t >= start_time]
         if end_time is not None:
@@ -1682,6 +2655,81 @@ class Spindle:
         zs = self.boundary_radius * np.outer(np.ones_like(u), np.cos(v))
         ax.plot_wireframe(xs, ys, zs, color='lightgray', alpha=0.2, linewidth=0.5)
 
+        # -- metaphase plate (disk): pose (+ characteristic vectors) and site occupancy --
+        # all of this is skipped when the plate is disabled; disk_artists stays empty and
+        # update() leaves it alone, so the animation is just the MTOCs and the boundary
+        disk_artists = []
+        has_disk_pose_history = self.disk_enabled and 'disk_center' in self.trajectory[times[0]]
+        if self.disk_enabled and not has_disk_pose_history:
+            print("No per-frame disk pose was recorded in this trajectory (predates disk "
+                  "tracking) -- showing the disk at its current, static pose in every frame.")
+
+        def _disk_pose(t):
+            if has_disk_pose_history:
+                data = self.trajectory[t]
+                return data['disk_center'], data['disk_e1'], data['disk_e2'], data['disk_e3']
+            return self.disk_center, self.disk_e1, self.disk_e2, self.disk_e3
+
+        def _disk_ring(center, e2, e3, n=48):
+            theta = np.linspace(0, 2 * np.pi, n)
+            return center + self.disk_radius * (np.outer(np.cos(theta), e2) + np.outer(np.sin(theta), e3))
+
+        def _disk_axis_ends(center, e1, e2, e3):
+            length = self.disk_radius
+            return (np.array([center, center + length * e1]),
+                    np.array([center, center + length * e2]),
+                    np.array([center, center + length * e3]))
+
+        if self.disk_enabled:
+            center0, e1_0, e2_0, e3_0 = _disk_pose(times[0])
+
+            disk_patch = Poly3DCollection([_disk_ring(center0, e2_0, e3_0)],
+                                           facecolor='tab:blue', alpha=0.25, edgecolor='navy')
+            ax.add_collection3d(disk_patch)
+
+            e1_ends0, e2_ends0, e3_ends0 = _disk_axis_ends(center0, e1_0, e2_0, e3_0)
+            e1_line, = ax.plot(*e1_ends0.T, color='navy', linewidth=2, label='disk e1 (normal)')
+            e2_line, = ax.plot(*e2_ends0.T, color='indigo', linewidth=1.5, label='disk e2')
+            e3_line, = ax.plot(*e3_ends0.T, color='mediumvioletred', linewidth=1.5, label='disk e3')
+
+            # every disk site (both faces, push + pull), so the tessellation and its occupancy are
+            # both visible: empty sites are drawn small/faint, occupied ones large/opaque and
+            # colored to match the mtoc occupying them. Occupancy itself is static across frames
+            # for now (the disk isn't wired into the sampler yet, see sample_spindle_update) -- only
+            # each site's lab-frame position needs to be recomputed per frame as the disk moves.
+            disk_site_local = np.concatenate([self.disk_push_local, self.disk_push_local,
+                                               self.disk_pull_local, self.disk_pull_local], axis=0)
+            disk_site_state = np.concatenate([self.disk_push_state_front, self.disk_push_state_back,
+                                               self.disk_pull_state_front, self.disk_pull_state_back])
+
+            def _disk_site_positions(center, e2, e3):
+                a, b = disk_site_local[:, 0], disk_site_local[:, 1]
+                return center + a[:, np.newaxis] * e2 + b[:, np.newaxis] * e3
+
+            disk_site_colors = np.tile(mcolors.to_rgba('lightgray', alpha=0.15), (len(disk_site_state), 1))
+            disk_site_sizes = np.full(len(disk_site_state), 4.0)
+            for i, mtoc_id in enumerate(mtoc_ids):
+                occupied = disk_site_state == mtoc_id
+                disk_site_colors[occupied] = mcolors.to_rgba(colors[i % len(colors)], alpha=0.9)
+                disk_site_sizes[occupied] = 25.0
+
+            disk_sites_scatter = ax.scatter(*_disk_site_positions(center0, e2_0, e3_0).T,
+                                             c=disk_site_colors, s=disk_site_sizes)
+
+            disk_artists = [disk_patch, e1_line, e2_line, e3_line, disk_sites_scatter]
+
+            def _update_disk(t):
+                center, e1, e2, e3 = _disk_pose(t)
+                disk_patch.set_verts([_disk_ring(center, e2, e3)])
+                e1_ends, e2_ends, e3_ends = _disk_axis_ends(center, e1, e2, e3)
+                e1_line.set_data_3d(*e1_ends.T)
+                e2_line.set_data_3d(*e2_ends.T)
+                e3_line.set_data_3d(*e3_ends.T)
+                disk_sites_scatter._offsets3d = tuple(_disk_site_positions(center, e2, e3).T)
+        else:
+            def _update_disk(t):
+                pass
+
         # precompute per-frame occupancy
         occupancy_frames = None
         push_occupancy_frames = None
@@ -1696,7 +2744,9 @@ class Spindle:
             for i, t in tqdm.tqdm(enumerate(times)):
                 t_end = t + window
                 if t_end > last_time:
-                    if (occupancy_frames or push_occupancy_frames):
+                    # the window runs past the end of the recording: hold the
+                    # previous frame, or clamp if this is the very first one
+                    if i > 0:
                         if show_pull:
                             occupancy_frames.append(occupancy_frames[-1])
                         if show_push:
@@ -1757,7 +2807,8 @@ class Spindle:
         ax.set_ylabel('y (µm)')
         ax.set_zlabel('z (µm)')
         ax.axis('equal')
-        ax.legend()
+        handles, labels = ax.get_legend_handles_labels()
+        ax_info.legend(handles, labels, loc='upper right', fontsize=8)
 
         def _stats(t):
             data = self.trajectory[t]
@@ -1803,13 +2854,18 @@ class Spindle:
             for sc, mtoc_id in zip(scatters, mtoc_ids):
                 pos = mtoc_pos[mtoc_id]
                 sc._offsets3d = (np.array([pos[0]]), np.array([pos[1]]), np.array([pos[2]]))
+
+            _update_disk(t)
+
             if occ_scatter is not None:
                 occ_scatter.set_facecolors(_pull_rgba(occupancy_frames[frame]))
             if push_occ_scatter is not None:
                 push_occ_scatter.set_facecolors(_push_rgba(push_occupancy_frames[frame]))
             cost, tubulin_use, num_mts, dist, forces = _stats(t)
             info_text.set_text(_format_text(t, cost, tubulin_use, num_mts, dist, forces))
-            return scatters + ([occ_scatter] if occ_scatter is not None else []) + ([push_occ_scatter] if push_occ_scatter is not None else []) + [info_text]
+            return (scatters + disk_artists
+                    + ([occ_scatter] if occ_scatter is not None else [])
+                    + ([push_occ_scatter] if push_occ_scatter is not None else []) + [info_text])
 
         anim = FuncAnimation(fig, update, frames=len(times), interval=interval, blit=False)
 

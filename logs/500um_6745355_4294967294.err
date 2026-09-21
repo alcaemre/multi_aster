@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/mnt/home/ealca/multi-aster/two-aster-centring.py", line 56, in <module>
+    spindle = mas.Spindle(initial_mtoc_positions=mtoc_positions, 
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/home/ealca/multi-aster/multi_aster_spindle.py", line 305, in __init__
+    tree = cKDTree(pull_lattice)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "_ckdtree.pyx", line 560, in scipy.spatial._ckdtree.cKDTree.__init__
+ValueError: data must be of shape (n, m), where there are n points of dimension m

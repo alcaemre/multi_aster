@@ -1,0 +1,43 @@
+learning rate: 0.032 s
+(163842, 3)
+spindle saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/spindle.pkl
+                               Spindle Simulation                               
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                                    Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                                 4867.96s │
+│ Last Accepted Time (s)            │             499.99999999989694 / 500.00s │
+│ Last Accepted Position (um)       │    {1: array([1.048, -0.479, 0.362]), 2: │
+│                                   │         array([-1.043, -0.539, -0.328])} │
+│ Disk Centre (um)                  │                   [-0.000 -0.000 -0.000] │
+│ Disk Orientation (e1, e2)         │      [1.000 0.000 -0.000], [-0.000 1.000 │
+│                                   │                                  -0.000] │
+│ Spindle Length (um)               │                   2.203131722477339 / 20 │
+│ Net Force on aster 1 (pN)         │                    [-3.393 5.492 -0.580] │
+│ Last Accepted Cost                │                   0.00018130775656777232 │
+│ Total number of MTs               │                                      697 │
+│ Number of cortical pushing MTs    │                                      437 │
+│ Number of cortical pulling MTs    │                                       33 │
+│ Number of chromosomal pushing MTs │                                      185 │
+│ Number of chromosomal pulling MTs │                                       42 │
+│ Tubulin use / tubulin budget (um) │                9998.186922434323 / 10000 │
+│ Attempt Counter                   │                                        3 │
+│ Number of total attempts          │                          49071 / 1000000 │
+│ Number of Positions Accepted      │                                    15625 │
+│ Memory (RSS)                      │                  5.26 GB / 32.8 GB alloc │
+└───────────────────────────────────┴──────────────────────────────────────────┘cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/cost_time_plot.png
+aster distance from centre saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/aster_distance_from_centre.png
+aster separation saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/aster_separation.png
+# MTs per MTOC plot saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/num_mts_per_mtoc.png
+# disk MTs per MTOC plot saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/num_disk_mts_per_mtoc.png
+occupancy vs angle plot saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/occupancy_vs_angle.png
+surface occupancy saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/surface_occupancy_pull.png
+surface occupancy saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/surface_occupancy_push.png
+disk centre: [-0.000 -0.000 -0.000]  (target: origin)
+disk e1 (normal): [1.000 0.000 -0.000]  (target: +x)
+disk sites occupied: 226 / 40046
+500.0319999998969
+Precomputing occupancy for 147 frames...
+Done.
+Rendering Animation . . . 
+animation saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/fixed_disk_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.0005_temperature_0.032_learning_rate/plots/occupancy_ani.mp4

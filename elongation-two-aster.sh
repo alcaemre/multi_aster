@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=4000um
+#SBATCH --job-name=1000um
 #SBATCH --partition=ccb
 #SBATCH --output=logs/%x_%j_%a.out
 #SBATCH --error=logs/%x_%j_%a.err

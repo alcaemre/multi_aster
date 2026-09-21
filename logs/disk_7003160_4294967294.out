@@ -1,0 +1,40 @@
+learning rate: 0.032 s
+(40962, 3)
+spindle saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/pull_disk_centring_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.005_temperature_0.032_learning_rate/spindle.pkl
+                               Spindle Simulation                               
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Parameter                         ┃                                    Value ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Wall elapsed time (s)             │                                34405.08s │
+│ Last Accepted Time (s)            │              130.8159999999904 / 200.00s │
+│ Last Accepted Position (um)       │    {1: array([4.052, 4.489, -5.695]), 2: │
+│                                   │          array([-4.936, -4.055, 8.121])} │
+│ Disk Centre (um)                  │                   [-2.508 -4.492 -3.020] │
+│ Disk Orientation (e1, e2)         │      [0.985 0.077 -0.152], [-0.087 0.995 │
+│                                   │                                  -0.057] │
+│ Spindle Length (um)               │                   18.56418432777316 / 20 │
+│ Net Force on aster 1 (pN)         │                   [-13.567 6.706 15.315] │
+│ Last Accepted Cost                │                         35.6188198767028 │
+│ Number of MTs                     │                                      527 │
+│ Number of pushing MTs             │                                      450 │
+│ Number of pulling MTs             │                                       41 │
+│ Tubulin use / tubulin budget (um) │               10016.198285355338 / 10000 │
+│ Attempt Counter                   │                                    11319 │
+│ Number of total attempts          │                        1000000 / 1000000 │
+│ Number of Positions Accepted      │                                     4088 │
+│ Memory (RSS)                      │                  0.26 GB / 32.8 GB alloc │
+└───────────────────────────────────┴──────────────────────────────────────────┘cost vs time plot saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/pull_disk_centring_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.005_temperature_0.032_learning_rate/plots/cost_time_plot.png
+aster distance from centre saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/pull_disk_centring_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.005_temperature_0.032_learning_rate/plots/aster_distance_from_centre.png
+aster separation saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/pull_disk_centring_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.005_temperature_0.032_learning_rate/plots/aster_separation.png
+# MTs per MTOC plot saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/pull_disk_centring_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.005_temperature_0.032_learning_rate/plots/num_mts_per_mtoc.png
+occupancy vs angle plot saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/pull_disk_centring_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.005_temperature_0.032_learning_rate/plots/occupancy_vs_angle.png
+surface occupancy saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/pull_disk_centring_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.005_temperature_0.032_learning_rate/plots/surface_occupancy_pull.png
+surface occupancy saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/pull_disk_centring_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.005_temperature_0.032_learning_rate/plots/surface_occupancy_push.png
+disk centre: [-2.508 -4.492 -3.020]  (target: origin)
+disk e1 (normal): [0.985 0.077 -0.152]  (target: +x)
+disk sites occupied: 36 / 4000
+130.8479999999904
+Precomputing occupancy for 31 frames...
+Done.
+Rendering Animation . . . 
+animation saved to /mnt/home/ealca/ceph/multi_aster_disk/inital_experiments/pull_disk_centring_5.0um_disk_2_aster_20.0_lbar_both_10000_tubulin__0.0001_dt_0.005_temperature_0.032_learning_rate/plots/occupancy_ani.mp4
