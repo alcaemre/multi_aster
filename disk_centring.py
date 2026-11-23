@@ -7,7 +7,7 @@
 
 import numpy as np
 
-import multi_aster_spindle as mas
+import spindle as mas
 
 import matplotlib.pyplot as plt
 import argparse
@@ -40,15 +40,15 @@ home = '/mnt/home/ealca/'
 mesh_density = 7
 num_motors = 100
 cell_radius = 20 # um
-tubulin_budget = 10000 #num_mts*cell_radius
+tubulin_budget = 30000 #num_mts*cell_radius
 num_mts = tubulin_budget / cell_radius
-optimization_temperature = 1e-3
+optimization_temperature = 5e-2
 
 growth_rate = 0.5 # um / s
 catastrophe_rate = 0.025 # 1 / s
 average_mt_length = growth_rate / catastrophe_rate # um
 
-proportion_MTs_reaching_surface = 0.4
+proportion_MTs_reaching_surface = 0.6
 
 learning_rate = np.round(1 /  ((tubulin_budget / proportion_MTs_reaching_surface) * np.square(catastrophe_rate) / growth_rate ), 5)
 # learning_rate = 0.01
@@ -58,9 +58,7 @@ spindle_length = 20 # um
 print(f'learning rate: {learning_rate} s')
 
 trimesh = np.load(f'{home}multi-aster/trimesh_cache/sphere_{mesh_density}_subdivs_1_radius.npy') * cell_radius
-sloan_100 = np.load(f'{home}multi-aster/sloane_cache/sloane_{num_motors}.npy') * cell_radius
-
-print(trimesh.shape)
+# sloan_100 = np.load(f'{home}multi-aster/sloane_cache/sloane_{num_motors}.npy') * cell_radius
 
 # -- metaphase plate (disk) --
 # radius relative to the cell, plus the drag coefficients from disk-forces.tex section 1 at a
@@ -68,11 +66,11 @@ print(trimesh.shape)
 # zeta_perp = 16 mu R, zeta_omega = 32/3 mu R^3)
 disk_radius = cell_radius / 4 # um
 disk_viscosity = 1.0 # pN s um^-2
-disk_zeta_parallel = 1e25 #(32 / 3) * disk_viscosity * disk_radius
+disk_zeta_parallel = (32 / 3) * disk_viscosity * disk_radius
 disk_zeta_perp = 16 * disk_viscosity * disk_radius
 disk_zeta_omega = (32 / 3) * disk_viscosity * disk_radius**3
 num_disk_push_sites = 20000
-num_disk_pull_sites = 23 # num sites on each face 23 * 2 = 46 kinetochores in total
+num_disk_pull_sites = 20000 # num sites on each face 23 * 2 = 46 kinetochores in total
 
 # calculate_cost() wants the disk centred at the origin with its normal e1 horizontal, pointing
 # along +x -- start it there, and put both MTOCs along that same x-axis (spindle poles on
@@ -81,22 +79,21 @@ num_disk_pull_sites = 23 # num sites on each face 23 * 2 = 46 kinetochores in to
 #
 # disk_center is the starting R_D: displace it to watch the plate recentre from an off-axis
 # start. It must satisfy |disk_center| + disk_radius <= cell_radius or Spindle rejects it.
-disk_center = np.array([1.0, 1.0, 1.0])
+disk_center = np.array([2.0, -5.0, 6.0])
 disk_normal = np.array([2.0, 0.0, 0.0])
 disk_tangent = np.array([0.0, 1.0, 0.0])
-mtoc_positions = np.array([[10, 0, 0], [-10, 0, 0]])
+mtoc_positions = np.array([[5, 2, 6], [-3, -10, 3]])
 
 force = 'both'
 
 spindle = mas.Spindle(initial_mtoc_positions=mtoc_positions,
-            push_lattice=trimesh,
-            pull_lattice=sloan_100,
+            lattice=trimesh,
             boundary_radius=cell_radius,
             tubulin_budget=tubulin_budget,
             growth_rate=growth_rate,
             spindle_length=spindle_length,
             stall_force=10.0,
-            rigidity=5,
+            rigidity=30,
             pull_force=10.0,
             average_mt_length=average_mt_length,
             optimization_temperature=optimization_temperature,
@@ -111,11 +108,13 @@ spindle = mas.Spindle(initial_mtoc_positions=mtoc_positions,
             disk_zeta_parallel=disk_zeta_parallel,
             disk_zeta_perp=disk_zeta_perp,
             disk_zeta_omega=disk_zeta_omega,
+            disk_enabled=True,
             disk_shadowing_enabled=True,
-            fix_mtoc_positions=True, # MTOCs held fixed at mtoc_positions; the disk is left free to move
-            data_dir=f'{ceph}multi_aster_disk/inital_experiments/',
+            seed=1,
+            fix_mtoc_positions=False, # MTOCs held fixed at mtoc_positions; the disk is left free to move
+            data_dir=f'{ceph}multi_aster_disk/one_lattice/',
             # dir_prefix=f'pull_disk_centring_{disk_radius}um_disk_{len(mtoc_positions)}_aster_{average_mt_length}_lbar_{force}_{tubulin_budget}_tubulin__{1e-4}_dt_{optimization_temperature}_temperature_{learning_rate}_learning_rate',
-            dir_prefix=f'fixed_mtocs_{disk_radius}um_disk_{len(mtoc_positions)}_aster_{average_mt_length}_lbar_{force}_{tubulin_budget}_tubulin_{1e-4}_dt_{optimization_temperature}_temperature_{learning_rate}_learning_rate',
+            dir_prefix=f'disk_only_cost2_{len(mtoc_positions)}_aster_{average_mt_length}_lbar_{force}_{tubulin_budget}_tubulin_{optimization_temperature}_temperature_{learning_rate}_learning_rate',
             save_trajectory=True,
             save=True
             )
