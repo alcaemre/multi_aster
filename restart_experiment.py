@@ -2,7 +2,7 @@
 # Emre Alca
 # University of Pennsylvania
 # Created on Tue Jun 23 2026
-# Last Modified: 2026/11/20 10:38:14
+# Last Modified: 2026/11/23 09:40:21
 #
 import numpy as np
 
@@ -20,7 +20,7 @@ home = '/mnt/home/ealca/'
 # exp_dir = f'{ceph}multi_aster_disk/one_lattice/prefactors_0_0.1_0_0_1_1_0_0_2_aster_20.0_lbar_both_30000_tubulin_0.0008_temperature_0.016_learning_rate'
 # exp_dir = f'{ceph}multi_aster_disk/one_lattice/prefactors_0_0.01_0_0_1_1_0_0_2_aster_20.0_lbar_both_30000_tubulin_0.0008_temperature_0.016_learning_rate'
 # exp_dir = f'{ceph}multi_aster_disk/one_lattice/prefactors_0_1_0_0_1_1_0_0_2_aster_20.0_lbar_both_30000_tubulin_0.0008_temperature_0.016_learning_rate'
-exp_dir = f'{ceph}parameter-check/cat_0.05_prefactors_50_1_1_0_100_100_0_0_0_2_aster_10.0_lbar_both_10000_tubulin_200_motors_0.007_temperature_0.019999999999999997_learning_rate'
+exp_dir = f'{ceph}against-baseline/cat_0.05_prefactors_50_1_1_0_100_100_0_0_0_2_aster_10.0_lbar_both_10000_tubulin_200_motors_0.0001_temperature_0.019999999999999997_learning_rate'
 
 print(f'restarting {exp_dir}')
 
@@ -28,7 +28,7 @@ spindle = mas.retrieve_experiement(experiment_dir=exp_dir, save_trajectory=True,
 
 # print(spindle.num_accepted_states)
 
-num_attempts = 5000000
+num_attempts = 100000000
 max_time = 5000
 
 # one proposal-evaluating worker per core SLURM gives the job (see Spindle.optimize / ProposalPool)

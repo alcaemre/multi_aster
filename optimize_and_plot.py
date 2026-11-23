@@ -46,7 +46,7 @@ cell_radius = 20 # um
 tubulin_budget = 10000 #num_mts*cell_radius
 target_num_motors = 200 # desired number of engaged cortical motors (occupied boundary pull sites)
 num_mts = tubulin_budget / cell_radius
-optimization_temperature = 6e-3
+optimization_temperature = 1e-3
 
 growth_rate = 0.5 # um / s
 catastrophe_rate = 0.05 # 1 / s
@@ -98,7 +98,7 @@ force = 'both'
 cost_coefficients = {
     'spatial': 50,                         # spindle length vs spindle_length
     'material': 1,                      # tubulin use vs tubulin_budget
-    'motors': 1,                        # engaged cortical motors vs target_num_motors
+    'motors': 0.1,                        # engaged cortical motors vs target_num_motors
     'centring': 0,                        # MTOC centroid vs disk centre
     'disk_position':100,                   # disk centre of mass vs origin
     'disk_orientation': 100,                # disk normal e1 vs lab +x
@@ -135,7 +135,7 @@ spindle = mas.Spindle(initial_mtoc_positions=mtoc_positions,
             cost_coefficients=cost_coefficients,
             seed=1,
             fix_mtoc_positions=False, # MTOCs held fixed at mtoc_positions; the disk is left free to move
-            data_dir=f'{ceph}parameter-check', #multi-aster-parallel',#multi_aster_disk/one_lattice', #one_lattice',
+            data_dir=f'{ceph}against-baseline', #multi-aster-parallel',#multi_aster_disk/one_lattice', #one_lattice',
             # dir_prefix=f'pull_disk_centring_{disk_radius}um_disk_{len(mtoc_positions)}_aster_{average_mt_length}_lbar_{force}_{tubulin_budget}_tubulin__{1e-4}_dt_{optimization_temperature}_temperature_{learning_rate}_learning_rate',
             dir_prefix=f'cat_{catastrophe_rate}_prefactors_{"_".join(f"{v:g}" for v in cost_coefficients.values())}_{len(mtoc_positions)}_aster_{average_mt_length}_lbar_{force}_{tubulin_budget}_tubulin_{target_num_motors}_motors_{optimization_temperature}_temperature_{learning_rate}_learning_rate',
             save_trajectory=True,

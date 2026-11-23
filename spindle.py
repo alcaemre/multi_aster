@@ -509,10 +509,10 @@ class ProposalPool:
         finally:
             gc.unfreeze()
 
-    def dispatch(self, old_cost):
+    def dispatch(self, baseline_cost):
         """Starts a round: every worker applies the last winner, then evaluates one proposal."""
         for connection in self.connections:
-            connection.send((self.pending_change, old_cost))
+            connection.send((self.pending_change, baseline_cost))
         self.pending_change = None
 
     def collect(self):
@@ -569,7 +569,7 @@ def _proposal_worker(spindle, connection, seed):
             message = connection.recv()
             if message is None:
                 break
-            change, old_cost = message
+            change, baseline_cost = message
 
             if change is not None:
                 spindle._apply_accepted_change(change)
@@ -580,7 +580,7 @@ def _proposal_worker(spindle, connection, seed):
                 connection.send(None)
                 continue
 
-            evaluation = spindle._evaluate_proposal(proposal, old_cost)
+            evaluation = spindle._evaluate_proposal(proposal, baseline_cost)
             spindle._revert_proposal(evaluation)
 
             if evaluation['accepted']:
@@ -718,6 +718,8 @@ class Spindle:
         self.target_num_motors = target_num_motors
         self.num_attempts = num_attempts
         self.num_accepted_states = num_accepted_states
+        # accepted states whose do-nothing evolution left the cell (see optimize's refresh_baseline)
+        self.num_baseline_violations = 0
 
         # -- setting hyperparameters --
         self.euler_timestep_size = euler_timestep_size
@@ -884,6 +886,14 @@ class Spindle:
 
             # save num_total_attempts
             safe_np_save(self.num_attempts, os.path.join(self.dir_path, 'num_attempts.npy'))
+
+        elif dir_path is None:
+            # save=False with no existing experiment: nothing is written, so there are no
+            # experiment folders. Plotting methods need an explicit save_path in this case.
+            self.dir_path = None
+            self.plot_folder_path = None
+            self.spindle_trace_path = None
+            self.trajectory_path = None
 
         else:
             self.dir_path = dir_path
@@ -1611,20 +1621,17 @@ class Spindle:
 
         # --- spatial cost ---
 
+        # The spindle length and spindle-axis terms are defined by the MTOC 1 -> MTOC 2 pair, so
+        # they are skipped (absent from terms, like the disk terms when the plate is disabled)
+        # unless both MTOCs exist -- e.g. for a single-aster centring run, whose cost is then
+        # centring + material + motors.
+        has_spindle_axis = 1 in self.mtoc_positions and 2 in self.mtoc_positions
+
         # -- desired spindle elongation --
-        current_spindle_length = 0
-        i, j = np.triu_indices(len(mtoc_ids), k=1)  # k=1 excludes diagonal (no (i,i) pairs)
-        pairs = np.column_stack([mtoc_ids[i], mtoc_ids[j]])
-
-        for pair in pairs:
-            current_spindle_length += normalize_vecs((self.mtoc_positions[pair[0]] - self.mtoc_positions[pair[1]]))[1]
-        current_spindle_length = current_spindle_length / len(pairs)
-
-        # for two asters
-        two_aster_spindle_length = normalize_vecs(self.mtoc_positions[1] - self.mtoc_positions[2])[1]
-        current_spindle_length = two_aster_spindle_length
-
-        terms['spatial'] = np.square(1 - (current_spindle_length / self.spindle_length))
+        if has_spindle_axis:
+            # for two asters
+            current_spindle_length = normalize_vecs(self.mtoc_positions[1] - self.mtoc_positions[2])[1]
+            terms['spatial'] = np.square(1 - (current_spindle_length / self.spindle_length))
 
         # -- metaphase plate (disk) placement/orientation --
         # desired: centre of mass at the origin, and e1 along the lab +x axis -- i.e. the disk
@@ -1645,9 +1652,8 @@ class Spindle:
         # on how many MTs are attached, so a disabled (never-moving) plate would otherwise add a
         # constant to every state -- e.g. the default e1 = +z is edge-on and scores the full
         # disk_orientation coefficient, (2/pi * pi/2)^2 = 1 times the coefficient. That
-        # constant cancels in the Metropolis-Hastings delta, but optimize() seeds old_cost with
-        # len(push_state), so on a lattice smaller than the constant nothing is ever accepted
-        # and the run exits after one attempt with no error.
+        # constant cancels in the Metropolis-Hastings delta, but it inflates every logged cost
+        # and buries the terms that actually move.
         if self.disk_enabled:
             disk_normal_target = np.array([1.0, 0.0, 0.0])
             disk_com_distance = normalize_vecs(self.disk_center)[1]
@@ -1685,10 +1691,11 @@ class Spindle:
         # are both arbitrary, so the penalty must be even under either flip. Coincident MTOCs
         # give a zero axis vector (normalize_vecs leaves it zero), which scores the maximal
         # (pi/2)^2 rather than NaN.
-        spindle_axis = normalize_vecs(self.mtoc_positions[2] - self.mtoc_positions[1])[0]
-        spindle_disk_misalignment = np.arccos(np.clip(np.abs(np.dot(spindle_axis, spindle_alignment_target)), 0.0, 1.0))
+        if has_spindle_axis:
+            spindle_axis = normalize_vecs(self.mtoc_positions[2] - self.mtoc_positions[1])[0]
+            spindle_disk_misalignment = np.arccos(np.clip(np.abs(np.dot(spindle_axis, spindle_alignment_target)), 0.0, 1.0))
 
-        terms['spindle_disk_alignment'] = np.square(spindle_disk_misalignment)
+            terms['spindle_disk_alignment'] = np.square(spindle_disk_misalignment)
 
         # # -- spindle centring --
         # place the centre of the spindle at the centre of the disk (or at the origin when the
@@ -1899,11 +1906,69 @@ class Spindle:
 
             return is_disk, push, front, site_to_empty, 0
 
-    def _evaluate_proposal(self, proposal, old_cost):
+    def _evolve_cull_and_cost(self):
+        """
+        Integrates the current state forward by evolution_time, culls the MTs the moved
+        plate now shadows, and costs the result. Leaves the spindle in the evolved,
+        culled state; the caller saves whatever it needs to undo that.
+
+        Returns:
+            float: cost of the evolved state (calculate_cost()'s sum, term for term).
+            dict[str, float]: its terms before their prefactors (calculate_cost_terms).
+            list: the culled sites, as cull_shadowed_microtubules returns them.
+            bool: whether the MTOCs or the disk left the cell during the integration.
+        """
+        new_mtoc_positions, boundary_violated = self.time_evolution()
+        self.mtoc_positions = new_mtoc_positions
+
+        # the plate has just moved, so cut off any MT it now blocks before
+        # costing this state -- a shadowed MT must stop contributing force and
+        # tubulin, and the optimizer should see that consequence of the new pose
+        culled = self.cull_shadowed_microtubules()
+
+        # costed through the per-term breakdown so the terms can be saved alongside the total;
+        # the sum is calculate_cost()'s, term for term and in the same order
+        cost_terms = self.calculate_cost_terms()
+        cost = 0
+        for name, value in cost_terms.items():
+            cost += self.cost_coefficients[name] * value
+
+        return cost, cost_terms, culled, boundary_violated
+
+    def compute_baseline_cost(self):
+        """
+        The do-nothing baseline C(S, t + evolution_time): the cost the current state reaches
+        if it is evolved for one step with no MT attached or detached. optimize() compares each
+        proposal's evolved cost against this, so a proposal is judged by what it changes over
+        the step rather than by the drift the spindle would undergo anyway. Rejected proposals
+        leave the state untouched, so this holds for every attempt until the next acceptance.
+
+        The spindle is left exactly as it was found.
+
+        Returns:
+            float: the baseline cost, or np.inf if the do-nothing evolution leaves the cell
+                (doing nothing is then infeasible, so any in-cell proposal beats it).
+            bool: whether the do-nothing evolution left the cell.
+        """
+        # time_evolution replaces mtoc_positions and the disk pose rather than mutating them
+        # in place, so holding references is enough to restore them
+        old_mtoc_positions = self.mtoc_positions
+        old_disk_pose = (self.disk_center, self.disk_e1, self.disk_e2, self.disk_e3)
+
+        cost, _, culled, boundary_violated = self._evolve_cull_and_cost()
+
+        for culled_is_disk, culled_push, culled_front, culled_site, culled_value in culled:
+            self._resolve_state_array(culled_is_disk, culled_push, culled_front)[culled_site] = culled_value
+        self.mtoc_positions = old_mtoc_positions
+        self.disk_center, self.disk_e1, self.disk_e2, self.disk_e3 = old_disk_pose
+
+        return (np.inf if boundary_violated else cost), boundary_violated
+
+    def _evaluate_proposal(self, proposal, baseline_cost):
         """
         One Metropolis-Hastings attempt: applies a proposal from sample_spindle_update,
         integrates forward, culls newly shadowed MTs, costs the result, and decides
-        acceptance against old_cost. Leaves the spindle in the proposed state either way;
+        acceptance against baseline_cost. Leaves the spindle in the proposed state either way;
         _revert_proposal undoes it, which optimize() does on rejection and every
         ProposalPool worker does after every attempt.
 
@@ -1923,29 +1988,18 @@ class Spindle:
 
         target_state[lattice_site] = site_value
 
-        new_mtoc_positions, boundary_violated = self.time_evolution()
-        self.mtoc_positions = new_mtoc_positions
+        cost, cost_terms, culled, boundary_violated = self._evolve_cull_and_cost()
 
-        # the plate has just moved, so cut off any MT it now blocks before
-        # costing this state -- a shadowed MT must stop contributing force and
-        # tubulin, and the optimizer should see that consequence of the new pose
-        culled = self.cull_shadowed_microtubules()
-
-        # costed through the per-term breakdown so the terms can be saved alongside the total;
-        # the sum is calculate_cost()'s, term for term and in the same order
-        cost_terms = self.calculate_cost_terms()
-        cost = 0
-        for name, value in cost_terms.items():
-            cost += self.cost_coefficients[name] * value
-
+        # baseline_cost is the do-nothing baseline C(S, t + dtau) (see compute_baseline_cost), so
+        # this compares the two outcomes over the same interval rather than against C(S, t).
         # states which violated the boundary are always rejected
         # otherwise, we follow the Metropolis-Hastings condition
         accepted = False
-        if cost < old_cost and not boundary_violated:
+        if cost < baseline_cost and not boundary_violated:
             accepted = True # accept strict decreases in cost
         elif not boundary_violated:
-            # it must be true that cost >= old_cost
-            cost_delta = cost - old_cost # > 0
+            # it must be true that cost >= baseline_cost
+            cost_delta = cost - baseline_cost # > 0
             prob_of_acceptance = np.exp(-cost_delta / self.optimization_temperature)
 
             accepted = self.rng.choice([True, False], p=[prob_of_acceptance, 1-prob_of_acceptance])
@@ -2017,11 +2071,27 @@ class Spindle:
         of wall time.
         """
 
-        initial_cost = len(self.push_state) # setting initial cost to be very high
+        def refresh_baseline():
+            """The do-nothing cost C(S, t + dtau) every proposal from the current state is
+            compared against (see compute_baseline_cost). Counts, and warns on the first,
+            state whose do-nothing evolution leaves the cell -- effectively a failed run."""
+            baseline_cost, baseline_violated = self.compute_baseline_cost()
+            if baseline_violated:
+                self.num_baseline_violations += 1
+                if self.num_baseline_violations == 1:
+                    console.print(f'[bold red]warning:[/] at t = {self.time:.4f} s, evolving the current '
+                                  'state with no MT change leaves the cell; the do-nothing baseline is '
+                                  'set to inf, so any in-cell proposal will be accepted. This is counted '
+                                  'as "Baseline Boundary Violations" in the readout.')
+            return baseline_cost
+
         old_mtoc_positions = self.mtoc_positions.copy() # initial original state is the current state
         old_disk_center = self.disk_center.copy()
         old_disk_e1, old_disk_e2, old_disk_e3 = self.disk_e1.copy(), self.disk_e2.copy(), self.disk_e3.copy()
-        old_cost = initial_cost # any stable position is an improvement
+        # the last accepted state's own cost, C(S_n, t_n), for the readout only -- unknown
+        # until the first acceptance. Acceptance is decided against baseline_cost instead.
+        old_cost = None
+        baseline_cost = refresh_baseline()
         old_time = np.copy(self.time)
         # trace will be saved every save_batch_size accepted states.
         # the spindle_trace tracks changes to the boundary; disk_spindle_trace is a separate,
@@ -2097,7 +2167,7 @@ class Spindle:
 
                     if pool is not None:
                         # set the workers going first, so the readout below renders while they compute
-                        pool.dispatch(old_cost)
+                        pool.dispatch(baseline_cost)
 
                     # -- readout --
                     # rebuilt every readout_every seconds of wall time rather than every attempt:
@@ -2139,7 +2209,9 @@ class Spindle:
                                 outer_table.add_row('Spindle Axis / Disk Normal Angle (deg)', f'{old_misalignment:.2f}')
                             outer_table.add_row('Spindle Length (um)', f'{normalize_vecs(self.mtoc_positions[1] - self.mtoc_positions[2])[1]} / {self.spindle_length}') # tubulin use / tubulin budget
                         outer_table.add_row('Net Force on aster 1 (pN)', f'{self.calc_mtoc_velocity(1)*self.cytoplasmic_drag_factor}') # force vector on MTOC
-                        outer_table.add_row('Last Accepted Cost', str(old_cost)) # last accepted cost
+                        outer_table.add_row('Last Accepted Cost', str(old_cost)) # last accepted state's own cost
+                        outer_table.add_row('Do-nothing Baseline Cost', str(baseline_cost)) # what the next proposal must beat
+                        outer_table.add_row('Baseline Boundary Violations', str(self.num_baseline_violations))
                         outer_table.add_row('Total number of MTs', str(self.calculate_num_mts())) # cortical + chromosomal, push + pull
                         outer_table.add_row('Number of cortical pushing MTs', str(np.count_nonzero(self.push_state))) # boundary push sites
                         outer_table.add_row('Number of cortical pulling MTs', str(np.count_nonzero(self.pull_state))) # boundary pull sites
@@ -2190,7 +2262,7 @@ class Spindle:
                     attempt_counter += 1
                     self.num_attempts +=1
 
-                    evaluation = self._evaluate_proposal(proposal, old_cost)
+                    evaluation = self._evaluate_proposal(proposal, baseline_cost)
                     acceptable = evaluation['accepted']
 
                     # reverse metastate if the spindle modification is not acceptable
@@ -2219,6 +2291,13 @@ class Spindle:
                 old_cost = meta_cost
                 old_time = meta_time
                 self.time = meta_time
+                # the do-nothing cost this state just beat, C(S_n, t_n + dtau), kept for the
+                # trajectory; then the new state's own baseline, C(S_{n+1}, t_{n+1} + dtau),
+                # which every proposal until the next acceptance is compared against. In the
+                # pool path _apply_accepted_change has already put this spindle in S_{n+1},
+                # and the next pool.dispatch sends the new baseline to every worker.
+                beaten_baseline_cost = baseline_cost
+                baseline_cost = refresh_baseline()
                 if self.save:
                     if is_disk:
                         disk_spindle_trace.append((push, front, lattice_site, site_value))
@@ -2249,6 +2328,10 @@ class Spindle:
                         'mtoc_pos': self.mtoc_positions,
                         'cost': meta_cost, # this very state's cost, already computed when it was proposed
                         'cost_terms': meta_cost_terms, # its terms before their prefactors (see calculate_cost_terms)
+                        # the do-nothing cost C(S_prev, t_prev + dtau) this state was accepted
+                        # against (inf if doing nothing left the cell); cost - do_nothing_cost is
+                        # the delta the acceptance decision used. Not this state's own cost.
+                        'do_nothing_cost': beaten_baseline_cost,
                         'tubulin_use': sum(tubulin_use_per_mtoc.values()),
                         'tubulin_use_per_mtoc': tubulin_use_per_mtoc,
                         'num_mts': self.calculate_num_mts(),
@@ -2633,11 +2716,19 @@ class Spindle:
         plt.close()
         print(f'disk distance from centre saved to {save_path}')
 
-    def plot_disk_orientation(self, start_time=None, end_time=None, save_path=None, unwrap_phi=False):
+    def plot_disk_orientation(self, start_time=None, end_time=None, save_path=None, unwrap_phi=False, fold_sign=True):
         """
         Spherical angles of the disk unit normal e1 vs time, using the standard
         convention theta = arccos(e1_z) in [0, pi] (inclination from +z) and
         phi = arctan2(e1_y, e1_x) in (-pi, pi] (azimuth in the xy-plane).
+
+        By default (fold_sign=True) e1 is first replaced by -e1 wherever e1_x < 0. A plate's
+        orientation is its plane, so e1 and -e1 are the same pose -- calculate_cost_terms
+        scores the tilt through abs() for the same reason. Without the fold, a plate
+        settled broadside with e1 ~ -x puts phi on the +/-pi branch cut, and tiny wobbles in
+        e1_y flip it between +pi and -pi, which reads as spinning. Folded, the target pose
+        (e1 along +/-x) is theta = pi/2, phi = 0, and phi stays in [-pi/2, pi/2]; it reaches
+        +/-pi/2 only when the plate is edge-on in the xy-plane.
 
         Args:
             start_time (float): if given, restrict x-axis to times >= start_time
@@ -2645,6 +2736,8 @@ class Spindle:
             save_path (str): if given, write the figure here instead of plot_folder_path
             unwrap_phi (bool): if True, unwrap phi so the trace is continuous
                 instead of jumping by 2*pi at the +/-pi branch cut
+            fold_sign (bool): if True (default), plot the sign-free orientation, taking
+                e1 -> -e1 wherever e1_x < 0 (see above). False plots the raw e1.
 
         Returns:
             None. No-op (with a printed note) when the plate is disabled.
@@ -2655,6 +2748,8 @@ class Spindle:
 
         times, _, normals = self._disk_pose_history(start_time, end_time)
         normals = normals / np.linalg.norm(normals, axis=1, keepdims=True)
+        if fold_sign:
+            normals = np.where(normals[:, :1] < 0, -normals, normals)
 
         theta = np.arccos(np.clip(normals[:, 2], -1.0, 1.0))
         phi = np.arctan2(normals[:, 1], normals[:, 0])
@@ -2666,6 +2761,7 @@ class Spindle:
         ax.plot(times, phi, color='tab:orange', label='phi (azimuth in xy-plane)')
         ax.set_ylabel('angle (rad)')
         ax.set_xlabel('time (s)')
+        ax.set_title(r'disk normal $\pm e_1$ (sign folded so $e_{1,x} \geq 0$)' if fold_sign else r'disk normal $e_1$')
         if not unwrap_phi:
             ax.set_ylim([-np.pi - 0.1, np.pi + 0.1])
             ax.set_yticks([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])

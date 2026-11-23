@@ -2,7 +2,7 @@
 # Emre Alca
 # University of Pennsylvania
 # Created on Tue Jun 23 2026
-# Last Modified: 2026/11/11 11:15:51
+# Last Modified: 2026/11/22 22:43:54
 #
 
 import numpy as np
@@ -18,7 +18,7 @@ ceph = '/mnt/home/ealca/ceph/'
 home = '/mnt/home/ealca/'
 
 # exp_dir = f'{ceph}multi-aster-parallel/prefactors_0_1_1_100_500_500_100_0_0_2_aster_20.0_lbar_both_160000_tubulin_0.005_temperature_0.004999999999999999_learning_rate'
-exp_dir = f'{ceph}multi-aster-parallel/cat_0.025_prefactors_500_5_0_0_500_500_0_2e-09_2e-09_2_aster_20.0_lbar_both_80000_tubulin_0.005_temperature_0.009999999999999998_learning_rate'
+exp_dir = f'{ceph}against-baseline/cat_0.05_prefactors_50_1_1_0_100_100_0_0_0_2_aster_10.0_lbar_both_10000_tubulin_200_motors_0.0001_temperature_0.019999999999999997_learning_rate'
 # exp_dir = f'{ceph}multi_aster_disk/one_lattice/autoplot_test_2_aster_20.0_lbar_both_30000_tubulin_0.08_temperature_0.016_learning_rate'
 
 num = 2
